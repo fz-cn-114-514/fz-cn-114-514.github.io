@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>陀螺仪</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20p x; background: #f5f5f5; }
+        .container { background: white; padding: 20px; border-radius: 10px; text-align: center; }
+        .data { margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; }
+        .value { font-weight: bold; color: #007bff; font-size: 24px; }
+        .status { color: #dc3545; font-weight: bold; margin: 10px 0; }
+        button { background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px; }
+        button:disabled { background: #6c757d; }
+        .control-section { margin: 20px 0; padding: 15px; background: #e9ecef; border-radius: 5px; }
+        .toggle-switch { position: relative; display: inline-block; width: 60px; height: 34px; margin: 0 10px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #28a745; }
+        input:focus + .slider { box-shadow: 0 0 1px #28a745; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        .toggle-label { display: inline-block; vertical-align: middle; font-size: 16px; font-weight: bold; }
+        .ws-status { color: #ffc107; font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>陀螺仪</h2>
+        <div id="status" class="status">点击启动</div>
+        <div id="wsStatus" class="ws-status">WebSocket: 未连接</div>
+        <button id="startBtn">启动陀螺仪</button>
+        
+        <div class="data">俯仰角：<span id="pitch" class="value">0</span>°</div>
+        <div class="data">横滚角：<span id="roll" class="value">0</span>°</div>
+        <div class="data">偏航角：<span id="yaw" class="value">0</span>°</div>
+        
+        <div class="control-section">
+            <h3>控制选项</h3>
+            <label class="toggle-label">启用控制</label>
+            <label class="toggle-switch">
+                <input type="checkbox" id="controlSwitch">
+                <span class="slider"></span>
+            </label>
+            
+            <div style="margin: 15px 0;">
+                <button id="resetServoBtn">舵机回中</button>
+                <button id="resetAttitudeBtn">姿态归零</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const wsStatusEl = document.getElementById('wsStatus');
+        const startBtn = document.getElementById('startBtn');
+        const controlSwitch = document.getElementById('controlSwitch');
+        const resetServoBtn = document.getElementById('resetServoBtn');
+        const resetAttitudeBtn = document.getElementById('resetAttitudeBtn');
+        
+        // WebSocket连接
+        let ws = null;
+        let controlEnabled = false;
+        
+        // 连接WebSocket
+        function connectWebSocket() {
+            // 使用ESP32的IP地址和WebSocket端口
+            const wsUrl = 'ws://192.168.4.1:81';
+            
+            try {
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function() {
+                    console.log('WebSocket连接已打开');
+                    wsStatusEl.textContent = 'WebSocket: 已连接';
+                    wsStatusEl.style.color = '#28a745';
+                };
+                
+                ws.onmessage = function(event) {
+                    console.log('收到WebSocket消息:', event.data);
+                };
+                
+                ws.onerror = function(error) {
+                    console.error('WebSocket错误:', error);
+                    wsStatusEl.textContent = 'WebSocket: 连接错误';
+                    wsStatusEl.style.color = '#dc3545';
+                };
+                
+                ws.onclose = function() {
+                    console.log('WebSocket连接已关闭');
+                    wsStatusEl.textContent = 'WebSocket: 已断开';
+                    wsStatusEl.style.color = '#dc3545';
+                    // 尝试重新连接
+                    setTimeout(connectWebSocket, 3000);
+                };
+            } catch (error) {
+                console.error('WebSocket连接失败:', error);
+                wsStatusEl.textContent = 'WebSocket: 连接失败';
+                wsStatusEl.style.color = '#dc3545';
+                // 尝试重新连接
+                setTimeout(connectWebSocket, 3000);
+            }
+        }
+        
+        // 发送数据到ESP32
+        function sendData(pitch, roll, yaw, enabled) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const data = {
+                    pitch: pitch,
+                    roll: roll,
+                    yaw: yaw,
+                    enabled: enabled ? 1 : 0
+                };
+                ws.send(JSON.stringify(data));
+            }
+        }
+        
+        // 发送控制指令
+        function sendCommand(command) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(command);
+            }
+        }
+        
+        // 启动陀螺仪
+        function startGyro() {
+            if (!window.DeviceOrientationEvent) {
+                statusEl.textContent = '设备不支持';
+                return;
+            }
+            
+            statusEl.textContent = '启动中...';
+            startBtn.disabled = true;
+            
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission().then(permission => {
+                    if (permission === 'granted') startSensors();
+                    else statusEl.textContent = '权限被拒绝';
+                }).catch(() => statusEl.textContent = '权限请求失败');
+            } else {
+                startSensors();
+            }
+        }
+        
+        // 开始读取传感器数据
+        function startSensors() {
+            let hasData = false;
+            
+            window.addEventListener('deviceorientation', (event) => {
+                if (!hasData) {
+                    hasData = true;
+                    statusEl.textContent = '数据读取中';
+                    statusEl.style.color = '#28a745';
+                }
+                
+                const pitch = event.beta ? event.beta.toFixed(1) : '0';
+                const roll = event.gamma ? event.gamma.toFixed(1) : '0';
+                const yaw = event.alpha ? event.alpha.toFixed(1) : '0';
+                
+                document.getElementById('pitch').textContent = pitch;
+                document.getElementById('roll').textContent = roll;
+                document.getElementById('yaw').textContent = yaw;
+                
+                // 发送数据到ESP32
+                sendData(parseFloat(pitch), parseFloat(roll), parseFloat(yaw), controlEnabled);
+            });
+            
+            setTimeout(() => {
+                if (!hasData) {
+                    statusEl.textContent = '启动失败，请重试';
+                    startBtn.disabled = false;
+                    startBtn.textContent = '重试';
+                }
+            }, 3000);
+        }
+        
+        // 事件监听器
+        startBtn.addEventListener('click', startGyro);
+        
+        // 控制开关变化
+        controlSwitch.addEventListener('change', (event) => {
+            controlEnabled = event.target.checked;
+            console.log('控制状态:', controlEnabled ? '启用' : '禁用');
+        });
+        
+        // 舵机回中按钮
+        resetServoBtn.addEventListener('click', () => {
+            console.log('发送舵机回中指令');
+            sendCommand('reset_servo');
+        });
+        
+        // 姿态归零按钮
+        resetAttitudeBtn.addEventListener('click', () => {
+            console.log('发送姿态归零指令');
+            sendCommand('reset_attitude');
+        });
+        
+        // 页面加载时尝试连接WebSocket
+        window.addEventListener('load', connectWebSocket);
+    </script>
+</body>
+</html>
