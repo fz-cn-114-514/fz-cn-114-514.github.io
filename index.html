@@ -9,7 +9,7 @@
     body { 
       padding: 15px; 
       background: #f5f5f5; 
-      font-size: 18px; /* 增大基础字体大小 */
+      font-size: 20px; /* 增大基础字体大小 */
       max-width: 1200px; /* 限制最大宽度，在大屏幕上更美观 */
       margin: 0 auto; /* 居中显示 */
     }
@@ -37,9 +37,9 @@
     }
     .switch {
       position: relative; 
-      width: 80px; /* 增大开关宽度 */
-      height: 40px; /* 增大开关高度 */
-      border-radius: 20px;
+      width: 80px; /* 保持宽度不变 */
+      height: 45px; /* 进一步增加高度 */
+      border-radius: 22px; /* 调整圆角 */
       background: #ccc; 
       cursor: pointer; 
       transition: background 0.3s;
@@ -49,19 +49,19 @@
     .switch::after {
       content: ''; 
       position: absolute; 
-      width: 36px; /* 增大滑块大小 */
-      height: 36px;
+      width: 38px; /* 增大滑块大小 */
+      height: 38px;
       border-radius: 50%; 
-      top: 2px; 
-      left: 2px; 
+      top: 3px; 
+      left: 3px; 
       background: white;
       transition: left 0.3s;
     }
-    .switch.on::after { left: 42px; }
+    .switch.on::after { left: 39px; }
     .switch-label { 
       position: absolute; 
-      top: 8px; /* 调整标签位置 */
-      font-size: 14px; /* 增大开关标签文字 */
+      top: 10px; /* 调整标签位置 */
+      font-size: 14px; /* 保持字体大小 */
       color: white; 
       font-weight: bold;
     }
@@ -70,7 +70,7 @@
     
     /* 按钮样式 */
     .btn {
-      padding: 12px 20px; /* 增大按钮内边距 */
+      padding: 15px 20px; /* 增加垂直内边距 */
       border: none; 
       border-radius: 8px; /* 增大圆角 */
       background: #2196F3; 
@@ -81,6 +81,10 @@
       font-size: 18px; /* 增大按钮文字 */
       font-weight: bold;
       white-space: nowrap; /* 防止按钮文字换行 */
+      height: 50px; /* 增加按钮高度 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .btn:active { background: #FF5722; }
     .btn:disabled { background: #ccc; cursor: not-allowed; }
@@ -107,16 +111,17 @@
     }
     .param-table td {
       border: 1px solid #ddd; 
-      padding: 12px 8px; /* 增大单元格内边距 */
+      padding: 15px 8px; /* 增大单元格内边距 */
       text-align: center;
     }
     .param-table input {
       width: 100%; 
-      padding: 10px 5px; /* 增大输入框内边距 */
+      padding: 12px 5px; /* 增大输入框内边距 */
       border: 1px solid #ccc;
       border-radius: 5px; 
       text-align: center;
-      font-size: 16px; /* 增大输入框字体 */
+      font-size: 18px; /* 增大输入框字体 */
+      height: 45px; /* 增加高度 */
     }
     .param-table input:disabled { background: #eee; }
     
@@ -131,9 +136,14 @@
     }
     .status-row { 
       margin: 8px 0; /* 增大行间距 */
-      font-size: 16px; /* 增大状态栏字体 */
+      font-size: 18px; /* 进一步增大状态栏字体 */
       display: flex; /* 使用flex布局 */
       flex-wrap: wrap; /* 允许换行 */
+    }
+    .status-value {
+      font-weight: bold;
+      color: #2196F3;
+      font-size: 20px; /* 增大状态数值字体 */
     }
     .status-row strong {
       min-width: 100px; /* 设置标签最小宽度 */
@@ -151,7 +161,7 @@
       overflow: hidden;
       position: relative; 
       font-family: monospace; 
-      font-size: 14px; /* 增大日志字体 */
+      font-size: 16px; /* 进一步增大日志字体 */
       box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* 添加阴影 */
     }
     .log-content {
@@ -169,7 +179,7 @@
     /* 说明文字 */
     .desc { 
       margin: 15px 0; /* 增大说明区域边距 */
-      font-size: 16px; /* 增大说明文字 */
+      font-size: 18px; /* 进一步增大说明文字 */
       color: #666; 
       background: white; /* 添加背景色 */
       padding: 15px 15px; /* 添加内边距，与其他容器保持一致 */
@@ -177,7 +187,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* 添加阴影 */
     }
     .desc h4 {
-      font-size: 20px; /* 增大说明标题 */
+      font-size: 22px; /* 进一步增大说明标题 */
       margin-bottom: 10px; /* 增加标题下方间距 */
       color: #333; /* 添加颜色 */
     }
@@ -313,8 +323,8 @@
   <div class="status-bar">
     <div class="status-row"><strong>WiFi信息：</strong><span id="wifi-info">未连接 (ESP32_Gyroscope / 192.168.4.1)</span></div>
     <div class="status-row"><strong>浏览器信息：</strong><span id="browser-info">Chrome/120.0.0.0 (客户端v1.0)</span></div>
-    <div class="status-row"><strong>硬件信息：</strong><span id="hardware-info">陀螺仪未启动 / X:0 Y:0 Z:0</span></div>
-    <div class="status-row"><strong>界面信息：</strong><span id="ui-info">码率: 50Hz / 延迟: 0ms</span></div>
+    <div class="status-row"><strong>硬件信息：</strong><span id="hardware-info">陀螺仪未启动 / X:<span class="status-value">0</span> Y:<span class="status-value">0</span> Z:<span class="status-value">0</span></span></div>
+    <div class="status-row"><strong>界面信息：</strong>码率: <span class="status-value">50</span>Hz / 延迟: <span class="status-value">0</span>ms</div>
   </div>
 
   <!-- 使用说明 -->
