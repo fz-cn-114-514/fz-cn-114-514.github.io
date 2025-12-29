@@ -1,1302 +1,662 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>陀螺仪舵机控制</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>舵机陀螺仪控制</title>
     <style>
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
-        }
-        
-        body {
+            box-sizing: border-box;
             font-family: Arial, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            font-size: 24px;
-            line-height: 1.6;
-            -webkit-font-smoothing: antialiased;
         }
-        
-        .container {
-            background: white;
-            max-width: 100%;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        body {
+            padding: 10px;
+            background-color: #f5f5f5;
         }
-        
-        h2 {
-            text-align: center;
-            font-size: 42px;
-            margin-bottom: 35px;
-            color: #007bff;
-        }
-        
         /* 开关样式 */
-        .toggle-section {
+        .switch-group {
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
             flex-wrap: wrap;
-            gap: 15px;
-        }
-        
-        .toggle-group {
-            display: flex;
-            align-items: center;
-            flex-direction: column;
             gap: 10px;
-            flex: 1;
-            min-width: 120px;
+            margin-bottom: 20px;
         }
-        
-        .toggle-label {
-            font-weight: bold;
-            font-size: 24px;
-            color: #333;
-        }
-        
-        /* 自定义开关样式 */
-        .custom-toggle {
-            position: relative;
-            display: inline-block;
-            width: 180px;
-            height: 70px;
-        }
-        
-        .custom-toggle input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .custom-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 40px;
-        }
-        
-        .custom-slider:before {
-            position: absolute;
-            content: "OFF";
+        .switch-item {
             display: flex;
             align-items: center;
-            justify-content: center;
-            height: 60px;
-            width: 90px;
-            left: 5px;
-            bottom: 5px;
+            gap: 5px;
+        }
+        .switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background-color: #ccc;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .switch.on {
+            background-color: #4CAF50;
+        }
+        .switch::after {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
             background-color: white;
-            color: #dc3545;
-            font-size: 24px;
-            font-weight: bold;
-            transition: .4s;
-            border-radius: 55px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s;
         }
-        
-        input:checked + .custom-slider {
-            background-color: #28a745;
+        .switch.on::after {
+            left: 32px;
         }
-        
-        input:focus + .custom-slider {
-            box-shadow: 0 0 1px #28a745;
+        .switch-label {
+            position: absolute;
+            font-size: 12px;
+            color: white;
+            top: 50%;
+            transform: translateY(-50%);
         }
-        
-        input:checked + .custom-slider:before {
-            transform: translateX(85px);
-            content: "ON";
-            color: #28a745;
+        .switch-label.on {
+            left: 8px;
         }
-        
-        /* 按钮样式 */
-        .button-section {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-            gap: 15px;
+        .switch-label.off {
+            right: 8px;
         }
-        
-        .control-button {
-            background: #28a745; /* 默认绿色 */
+
+        /* 映射归零按钮 */
+        .reset-btn {
+            padding: 10px 20px;
+            background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 30px 45px;
-            border-radius: 15px;
+            border-radius: 5px;
             cursor: pointer;
-            font-size: 28px;
-            font-weight: bold;
-            transition: all 0.1s;
-            flex: 1;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
-        
-        .control-button:active {
-            background: #dc3545; /* 触碰红色 */
-            transform: scale(0.98);
+        .reset-btn:active {
+            background-color: #ff0000;
         }
-        
-        .control-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+
+        /* 通道参数区 */
+        .channel-container {
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
         }
-        
-        /* 通道配置样式 */
-        .channel-section {
-            margin-bottom: 30px;
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 10px;
-        }
-        
         .channel-title {
             font-weight: bold;
-            font-size: 28px;
-            margin-bottom: 25px;
-            color: #007bff;
-            text-align: center;
+            margin-bottom: 10px;
         }
-        
         .channel-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+        .param-item {
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .param-item label {
+            font-size: 12px;
+            color: #666;
+        }
+        .param-item input {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            text-align: center;
+        }
+        .param-item span {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background-color: #f9f9f9;
+            text-align: center;
+        }
+
+        /* 状态参数栏 */
+        .status-container {
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
             margin-bottom: 20px;
-            gap: 15px;
         }
-        
-        .channel-col {
-            flex: 1;
-            text-align: center;
-        }
-        
-        .value-display {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-            margin-bottom: 15px;
-            font-weight: bold;
-            font-size: 36px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            min-height: 100px;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .value-label {
-            font-size: 24px;
-            color: #6c757d;
-            text-align: center;
-            margin-bottom: 15px;
-            font-weight: bold;
-        }
-        
-        input[type="number"] {
-            width: 100%;
-            padding: 25px;
-            border: 2px solid #ced4da;
-            border-radius: 15px;
-            font-size: 28px;
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            min-height: 100px;
-        }
-        
-        input[type="number"]:focus {
-            outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
-        }
-        
-        /* 信息和状态区域 */
-        .info-section {
-            margin-bottom: 30px;
-            background: #e9ecef;
-            padding: 25px;
-            border-radius: 10px;
-        }
-        
-        .info-title {
-            font-weight: bold;
-            font-size: 32px;
-            margin-bottom: 25px;
-            color: #007bff;
-        }
-        
-        .info-content {
-            font-size: 24px;
-            line-height: 1.8;
-            color: #495057;
-            margin-bottom: 25px;
-        }
-        
-        .info-content p {
-            margin-bottom: 15px;
-        }
-        
-        .status-params {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
         .status-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 15px;
-            font-size: 26px;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
         }
-        
         .status-label {
             font-weight: bold;
-            color: #333;
         }
-        
         .status-value {
-            color: #007bff;
+            color: #666;
         }
-        
-        /* 调试信息 */
-        .debug-section {
-            background: #212529;
-            color: #ffffff;
-            padding: 25px;
-            border-radius: 15px;
-            height: 300px;
-            overflow-y: auto;
-            font-size: 18px;
-            line-height: 1.8;
-            display: flex;
-            flex-direction: column-reverse;
+
+        /* 说明区 */
+        .desc-container {
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: #666;
         }
-        
-        .debug-line {
-            margin-bottom: 15px;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+
+        /* 调试信息区 */
+        .debug-container {
+            background-color: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 5px;
+            height: 150px;
+            overflow: hidden;
+            font-size: 12px;
+            position: relative;
         }
-        
-        /* 响应式设计 */
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-            
-            h2 {
-                font-size: 24px;
-            }
-            
-            .toggle-section {
-                flex-direction: column;
-                align-items: center;
-                gap: 20px;
-            }
-            
-            .custom-toggle {
-                width: 120px;
-                height: 50px;
-            }
-            
-            .custom-slider:before {
-                height: 40px;
-                width: 50px;
-                font-size: 14px;
-            }
-            
-            input:checked + .custom-slider:before {
-                transform: translateX(66px);
-            }
-            
-            .button-section {
-                flex-direction: column;
-                gap: 20px;
-            }
-            
-            .channel-row {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .channel-section {
-                padding: 20px;
-            }
-            
-            .info-section {
-                padding: 20px;
-            }
-            
-            .debug-section {
-                height: 200px;
-            }
+        .debug-content {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            word-break: break-all;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>ESP32手机陀螺仪控制舵机by_fzcn</h2>
-        
-        <!-- 开关部分 -->
-        <div class="toggle-section">
-            <div class="toggle-group">
-                <span class="toggle-label">启用控制</span>
-                <label class="custom-toggle">
-                    <input type="checkbox" id="controlSwitch" checked>
-                    <span class="custom-slider"></span>
-                </label>
-            </div>
-            
-            <div class="toggle-group">
-                <span class="toggle-label">操作解锁</span>
-                <label class="custom-toggle">
-                    <input type="checkbox" id="lockSwitch" checked>
-                    <span class="custom-slider"></span>
-                </label>
-            </div>
-            
-            <div class="toggle-group">
-                <span class="toggle-label">陀螺仪开关</span>
-                <label class="custom-toggle">
-                    <input type="checkbox" id="sensorSwitch">
-                    <span class="custom-slider"></span>
-                </label>
+    <!-- 开关区 -->
+    <div class="switch-group">
+        <div class="switch-item">
+            <span>启用控制</span>
+            <div class="switch on" id="ctrl-switch">
+                <span class="switch-label on">ON</span>
+                <span class="switch-label off">OFF</span>
             </div>
         </div>
-        
-        <!-- 按钮部分 -->
-        <div class="button-section">
-            <button class="control-button" id="resetServoBtn">舵机回中</button>
-            <button class="control-button" id="resetAttitudeBtn">映射归零</button>
-        </div>
-        
-        <!-- 通道配置 - Pitch -->
-        <div class="channel-section">
-            <div class="channel-title">俯仰角 (Pitch)</div>
-            
-            <!-- 行一：原始数据、映射角度、每度脉宽 -->
-            <div class="channel-row">
-                <div class="channel-col">
-                    <div class="value-label">传感器原始数据</div>
-                    <div id="pitchRaw" class="value-display">0.0°</div>
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">映射角度</div>
-                    <div id="pitchMapped" class="value-display">0.0°</div>
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">每度脉宽 (Rate)</div>
-                    <input type="number" id="pitchRate" step="0.01" min="-50.00" max="50.00" value="5.55">
-                </div>
-            </div>
-            
-            <!-- 行二：最小脉宽、当前脉宽、最大脉宽 -->
-            <div class="channel-row">
-                <div class="channel-col">
-                    <div class="value-label">最小脉宽</div>
-                    <input type="number" id="pitchMin" step="1" min="100" max="2500" value="500">
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">当前脉宽</div>
-                    <div id="pitchPulse" class="value-display">1500us</div>
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">最大脉宽</div>
-                    <input type="number" id="pitchMax" step="1" min="100" max="2500" value="2500">
-                </div>
+        <div class="switch-item">
+            <span>操作解锁</span>
+            <div class="switch on" id="lock-switch">
+                <span class="switch-label on">ON</span>
+                <span class="switch-label off">OFF</span>
             </div>
         </div>
-        
-        <!-- 通道配置 - Roll -->
-        <div class="channel-section">
-            <div class="channel-title">横滚角 (Roll)</div>
-            
-            <!-- 行一：原始数据、映射角度、每度脉宽 -->
-            <div class="channel-row">
-                <div class="channel-col">
-                    <div class="value-label">传感器原始数据</div>
-                    <div id="rollRaw" class="value-display">0.0°</div>
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">映射角度</div>
-                    <div id="rollMapped" class="value-display">0.0°</div>
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">每度脉宽 (Rate)</div>
-                    <input type="number" id="rollRate" step="0.01" min="-50.00" max="50.00" value="5.55">
-                </div>
+        <div class="switch-item">
+            <span>陀螺仪开关</span>
+            <div class="switch" id="gyro-switch">
+                <span class="switch-label on">ON</span>
+                <span class="switch-label off">OFF</span>
             </div>
-            
-            <!-- 行二：最小脉宽、当前脉宽、最大脉宽 -->
-            <div class="channel-row">
-                <div class="channel-col">
-                    <div class="value-label">最小脉宽</div>
-                    <input type="number" id="rollMin" step="1" min="100" max="2500" value="500">
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">当前脉宽</div>
-                    <div id="rollPulse" class="value-display">1500us</div>
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">最大脉宽</div>
-                    <input type="number" id="rollMax" step="1" min="100" max="2500" value="2500">
-                </div>
-            </div>
-        </div>
-        
-        <!-- 通道配置 - Yaw -->
-        <div class="channel-section">
-            <div class="channel-title">偏航角 (Yaw)</div>
-            
-            <!-- 行一：原始数据、映射角度、每度脉宽 -->
-            <div class="channel-row">
-                <div class="channel-col">
-                    <div class="value-label">传感器原始数据</div>
-                    <div id="yawRaw" class="value-display">0.0°</div>
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">映射角度</div>
-                    <div id="yawMapped" class="value-display">0.0°</div>
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">每度脉宽 (Rate)</div>
-                    <input type="number" id="yawRate" step="0.01" min="-50.00" max="50.00" value="5.55">
-                </div>
-            </div>
-            
-            <!-- 行二：最小脉宽、当前脉宽、最大脉宽 -->
-            <div class="channel-row">
-                <div class="channel-col">
-                    <div class="value-label">最小脉宽</div>
-                    <input type="number" id="yawMin" step="1" min="100" max="2500" value="500">
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">当前脉宽</div>
-                    <div id="yawPulse" class="value-display">1500us</div>
-                </div>
-                
-                <div class="channel-col">
-                    <div class="value-label">最大脉宽</div>
-                    <input type="number" id="yawMax" step="1" min="100" max="2500" value="2500">
-                </div>
-            </div>
-        </div>
-        
-        <!-- 信息和状态区域 -->
-        <div class="info-section">
-            <div class="info-title">网页状态参数</div>
-            <div class="status-params">
-                <div class="status-row">
-                    <span class="status-label">WebSocket状态:</span>
-                    <span id="wsStatus" class="status-value">未连接</span>
-                </div>
-                <div class="status-row">
-                    <span class="status-label">传感器状态:</span>
-                    <span id="sensorStatus" class="status-value">已关闭</span>
-                </div>
-                <div class="status-row">
-                    <span class="status-label">控制状态:</span>
-                    <span id="controlStatus" class="status-value">已启用</span>
-                </div>
-                <div class="status-row">
-                    <span class="status-label">锁屏状态:</span>
-                    <span id="lockStatus" class="status-value">已锁定</span>
-                </div>
-            </div>
-            
-            <div class="info-title">使用说明</div>
-            <div class="info-content">
-                <p>1. 连接ESP32_Gyroscope热点后自动进入此页面</p>
-                <p>2. 点击"陀螺仪开关"开启陀螺仪数据采集</p>
-                <p>3. 调整各通道的每度脉宽和脉宽范围</p>
-                <p>4. 使用"启用控制"开关控制陀螺仪对舵机的影响</p>
-                <p>5. 使用"锁屏开关"防止误触操作</p>
-                <p>6. "舵机回中"将所有舵机设置为1500us脉宽</p>
-                <p>7. "映射归零"将当前姿态设为基准0度</p>
-            </div>
-            
-            <div class="info-title">注意事项</div>
-            <div class="info-content">
-                <p>1. 首次使用需要授权陀螺仪访问权限</p>
-                <p>2. 操作锁定状态下无法修改配置或执行控制指令</p>
-                <p>3. 舵机回中按钮仅在关闭启用控制后可用</p>
-                <p>4. 请确保舵机脉宽设置在安全范围内（500-2500us）</p>
-                <p>5. 每度脉宽数值范围：-50.00 至 +50.00，负值时通道反转映射</p>
-            </div>
-        </div>
-        
-        <!-- 调试信息 -->
-        <div class="debug-section" id="debugSection">
-            <div class="debug-line">系统初始化完成</div>
         </div>
     </div>
 
+    <!-- 映射归零按钮 -->
+    <button class="reset-btn" id="reset-btn">映射归零</button>
+
+    <!-- 通道参数区（P/R/Y三轴） -->
+    <div class="channel-container">
+        <div class="channel-title">俯仰通道（P）</div>
+        <div class="channel-row">
+            <div class="param-item">
+                <label>传感器原数值</label>
+                <span id="p-raw">0</span>
+            </div>
+            <div class="param-item">
+                <label>映射角度</label>
+                <span id="p-mapped">0</span>
+            </div>
+            <div class="param-item">
+                <label>映射引脚</label>
+                <input type="number" id="p-pin" value="11" disabled>
+            </div>
+            <div class="param-item">
+                <label>每度脉宽(rate)</label>
+                <input type="number" id="p-rate" value="10" disabled>
+            </div>
+        </div>
+        <div class="channel-row">
+            <div class="param-item">
+                <label>最小脉宽</label>
+                <input type="number" id="p-min" value="500" disabled>
+            </div>
+            <div class="param-item">
+                <label>输出脉宽</label>
+                <span id="p-pwm">1500</span>
+            </div>
+            <div class="param-item">
+                <label>0度脉宽</label>
+                <input type="number" id="p-zero" value="1500" disabled>
+            </div>
+            <div class="param-item">
+                <label>最大脉宽</label>
+                <input type="number" id="p-max" value="2500" disabled>
+            </div>
+        </div>
+    </div>
+
+    <div class="channel-container">
+        <div class="channel-title">横滚通道（R）</div>
+        <div class="channel-row">
+            <div class="param-item">
+                <label>传感器原数值</label>
+                <span id="r-raw">0</span>
+            </div>
+            <div class="param-item">
+                <label>映射角度</label>
+                <span id="r-mapped">0</span>
+            </div>
+            <div class="param-item">
+                <label>映射引脚</label>
+                <input type="number" id="r-pin" value="12" disabled>
+            </div>
+            <div class="param-item">
+                <label>每度脉宽(rate)</label>
+                <input type="number" id="r-rate" value="10" disabled>
+            </div>
+        </div>
+        <div class="channel-row">
+            <div class="param-item">
+                <label>最小脉宽</label>
+                <input type="number" id="r-min" value="500" disabled>
+            </div>
+            <div class="param-item">
+                <label>输出脉宽</label>
+                <span id="r-pwm">1500</span>
+            </div>
+            <div class="param-item">
+                <label>0度脉宽</label>
+                <input type="number" id="r-zero" value="1500" disabled>
+            </div>
+            <div class="param-item">
+                <label>最大脉宽</label>
+                <input type="number" id="r-max" value="2500" disabled>
+            </div>
+        </div>
+    </div>
+
+    <div class="channel-container">
+        <div class="channel-title">偏航通道（Y）</div>
+        <div class="channel-row">
+            <div class="param-item">
+                <label>传感器原数值</label>
+                <span id="y-raw">0</span>
+            </div>
+            <div class="param-item">
+                <label>映射角度</label>
+                <span id="y-mapped">0</span>
+            </div>
+            <div class="param-item">
+                <label>映射引脚</label>
+                <input type="number" id="y-pin" value="13" disabled>
+            </div>
+            <div class="param-item">
+                <label>每度脉宽(rate)</label>
+                <input type="number" id="y-rate" value="10" disabled>
+            </div>
+        </div>
+        <div class="channel-row">
+            <div class="param-item">
+                <label>最小脉宽</label>
+                <input type="number" id="y-min" value="500" disabled>
+            </div>
+            <div class="param-item">
+                <label>输出脉宽</label>
+                <span id="y-pwm">1500</span>
+            </div>
+            <div class="param-item">
+                <label>0度脉宽</label>
+                <input type="number" id="y-zero" value="1500" disabled>
+            </div>
+            <div class="param-item">
+                <label>最大脉宽</label>
+                <input type="number" id="y-max" value="2500" disabled>
+            </div>
+        </div>
+    </div>
+
+    <!-- 状态参数栏 -->
+    <div class="status-container">
+        <div class="status-row">
+            <span class="status-label">WiFi信息</span>
+            <span class="status-value" id="wifi-info">未连接 / -</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">浏览器信息</span>
+            <span class="status-value" id="browser-info">- / v1.0</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">硬件信息</span>
+            <span class="status-value" id="hardware-info">未开启 / P:0, R:0, Y:0</span>
+        </div>
+        <div class="status-row">
+            <span class="status-label">界面信息</span>
+            <span class="status-value" id="ui-info">- / 100Hz / 0ms</span>
+        </div>
+    </div>
+
+    <!-- 说明区 -->
+    <div class="desc-container">
+        <h4>使用说明</h4>
+        <p>1. 陀螺仪开关开启后读取手机三轴数据，映射归零后以当前值为0度基准</p>
+        <p>2. 输出脉宽计算公式：输出脉宽=0度脉宽+rate×映射角度，且不超过最小/最大脉宽限制</p>
+        <p>3. 操作解锁关闭后，仅可操作解锁开关，其余控件不可点击</p>
+        <h4>注意事项</h4>
+        <p>1. 确保手机开启陀螺仪权限</p>
+        <p>2. WiFi连接后才能向ESP32下发数据</p>
+        <p>3. 舵机脉宽范围建议500-2500us，避免超出硬件极限</p>
+    </div>
+
+    <!-- 调试信息区 -->
+    <div class="debug-container">
+        <div class="debug-content" id="debug-content"></div>
+    </div>
+
     <script>
-        const wsStatusEl = document.getElementById('wsStatus');
-        const sensorStatusEl = document.getElementById('sensorStatus');
-        const controlStatusEl = document.getElementById('controlStatus');
-        const unlockStatusEl = document.getElementById('lockStatus');
-        const controlSwitch = document.getElementById('controlSwitch');
-        const lockSwitch = document.getElementById('lockSwitch');
-        const sensorSwitch = document.getElementById('sensorSwitch');
-        const resetServoBtn = document.getElementById('resetServoBtn');
-        const resetAttitudeBtn = document.getElementById('resetAttitudeBtn');
-        const debugSection = document.getElementById('debugSection');
-        
-        // WebSocket连接
-        let ws = null;
-        let controlEnabled = true; // 默认启用
-        let operationLocked = false; // 默认解锁（ON状态）
-        let sensorEnabled = false; // 默认关闭
-        let lockClickCount = 0;
-        let lockClickTimer = null;
-        let gyroStarted = false;
-        
-        // 通道配置
-        let channelConfig = {
-            pitch: {
-                rate: 5.55,
-                minPulse: 500,
-                maxPulse: 2500
-            },
-            roll: {
-                rate: 5.55,
-                minPulse: 500,
-                maxPulse: 2500
-            },
-            yaw: {
-                rate: 5.55,
-                minPulse: 500,
-                maxPulse: 2500
-            }
-        };
-        
-        // 1. 核心状态管理（每个轴完全独立）
-        const axisState = {
-            pitch: {
-                total: 3600,          // 累计值（初始3600）
-                prev: null,           // 上一次原始值
-                trend: [],            // 趋势队列（最近5帧delta方向）
-                lock: false,          // 轴互斥锁
-                speed: 0              // 旋转速度（用于动态阈值）
-            },
-            roll: {
-                total: 3600,
-                prev: null,
-                trend: [],
-                lock: false,
-                speed: 0
-            },
-            yaw: {
-                total: 3600,
-                prev: null,
-                trend: [],
-                lock: false,
-                speed: 0
-            }
+        // 全局状态
+        const state = {
+            // 开关状态
+            ctrlEnabled: true,
+            lockUnlocked: true,
+            gyroEnabled: false,
+            // 映射归零基准值
+            resetBase: { p: 0, r: 0, y: 0 },
+            // 陀螺仪原始数据
+            gyroRaw: { p: 0, r: 0, y: 0 },
+            // WebSocket连接
+            ws: null,
+            // 延迟统计
+            lastSendTime: 0,
+            delay: 0,
+            // 码率统计
+            sendCount: 0,
+            lastRateTime: Date.now()
         };
 
-        // 2. 动态配置（升级为5取3趋势判定，适配手机高性能）
-        const DYNAMIC_CONFIG = {
-            fastSpeed: 2.0,          // 快速旋转判定阈值（°/帧）
-            slowThreshold: 0.3,      // 慢速旋转防抖阈值
-            fastThreshold: 1.0,      // 快速旋转防抖阈值
-            trendLength: 5,          // 趋势判定帧数（升级为5帧）
-            trendValid: 3,           // 5取3：至少3帧同方向才判定为有效趋势
-            jumpThresholds: {
-                pitch: 180, maxPitch: 360,
-                roll: 90, maxRoll: 180,
-                yaw: 180, maxYaw: 360
-            }
+        // DOM元素
+        const els = {
+            // 开关
+            ctrlSwitch: document.getElementById('ctrl-switch'),
+            lockSwitch: document.getElementById('lock-switch'),
+            gyroSwitch: document.getElementById('gyro-switch'),
+            // 按钮
+            resetBtn: document.getElementById('reset-btn'),
+            // 通道参数
+            pRaw: document.getElementById('p-raw'),
+            pMapped: document.getElementById('p-mapped'),
+            pPin: document.getElementById('p-pin'),
+            pRate: document.getElementById('p-rate'),
+            pMin: document.getElementById('p-min'),
+            pPwm: document.getElementById('p-pwm'),
+            pZero: document.getElementById('p-zero'),
+            pMax: document.getElementById('p-max'),
+            rRaw: document.getElementById('r-raw'),
+            rMapped: document.getElementById('r-mapped'),
+            rPin: document.getElementById('r-pin'),
+            rRate: document.getElementById('r-rate'),
+            rMin: document.getElementById('r-min'),
+            rPwm: document.getElementById('r-pwm'),
+            rZero: document.getElementById('r-zero'),
+            rMax: document.getElementById('r-max'),
+            yRaw: document.getElementById('y-raw'),
+            yMapped: document.getElementById('y-mapped'),
+            yPin: document.getElementById('y-pin'),
+            yRate: document.getElementById('y-rate'),
+            yMin: document.getElementById('y-min'),
+            yPwm: document.getElementById('y-pwm'),
+            yZero: document.getElementById('y-zero'),
+            yMax: document.getElementById('y-max'),
+            // 状态信息
+            wifiInfo: document.getElementById('wifi-info'),
+            browserInfo: document.getElementById('browser-info'),
+            hardwareInfo: document.getElementById('hardware-info'),
+            uiInfo: document.getElementById('ui-info'),
+            // 调试信息
+            debugContent: document.getElementById('debug-content')
         };
-        
-        // 3. 数据获取标志
-        let hasGyroData = false;
-        
-        // 添加调试信息
-        function addDebugInfo(text) {
-            const debugLine = document.createElement('div');
-            debugLine.className = 'debug-line';
-            debugLine.textContent = '[' + new Date().toLocaleTimeString() + '] ' + text;
-            debugSection.insertBefore(debugLine, debugSection.firstChild);
-            
-            // 限制调试信息数量
-            if (debugSection.children.length > 50) {
-                debugSection.removeChild(debugSection.lastChild);
-            }
-        }
-        
-        // 显示警告信息
-        function showWarning(text) {
-            // 检查是否已有警告信息
-            let warningEl = document.getElementById('rangeWarning');
-            if (!warningEl) {
-                // 创建警告元素
-                warningEl = document.createElement('div');
-                warningEl.id = 'rangeWarning';
-                warningEl.style.cssText = `
-                    position: fixed;
-                    top: 10px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    background: red;
-                    color: white;
-                    padding: 15px 25px;
-                    border-radius: 10px;
-                    font-size: 24px;
-                    font-weight: bold;
-                    z-index: 1000;
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-                    animation: fadeInOut 3s ease-in-out;
-                `;
-                
-                // 添加动画样式
-                const styleEl = document.createElement('style');
-                styleEl.textContent = `
-                    @keyframes fadeInOut {
-                        0% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-                        20% { opacity: 1; transform: translateX(-50%) translateY(0); }
-                        80% { opacity: 1; transform: translateX(-50%) translateY(0); }
-                        100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-                    }
-                `;
-                document.head.appendChild(styleEl);
-                
-                document.body.appendChild(warningEl);
-            }
-            
-            // 更新警告文本
-            warningEl.textContent = text;
-            
-            // 重置动画
-            warningEl.style.animation = 'none';
-            setTimeout(() => {
-                warningEl.style.animation = 'fadeInOut 3s ease-in-out';
-            }, 10);
-            
-            // 3秒后移除警告
-            setTimeout(() => {
-                if (warningEl.parentNode) {
-                    warningEl.parentNode.removeChild(warningEl);
-                }
-            }, 3000);
-        }
-        
-        /**
-         * 精准修正跳变并计算有效Delta（区分方向）
-         * @param {string} axis 轴名称（pitch/roll/yaw）
-         * @param {number} current 当前原始值
-         * @param {number} prev 上一次原始值
-         * @returns {number} 修正后的有效Delta
-         */
-        function getCorrectedDelta(axis, current, prev) {
-            if (prev === null) return 0;
-            const jumpCfg = DYNAMIC_CONFIG.jumpThresholds;
-            
-            let delta = current - prev;
-            // 修正跳变（精准匹配每个轴的范围）
-            if (axis === 'pitch' && Math.abs(delta) > jumpCfg.pitch) {
-                delta = delta > 0 ? delta - jumpCfg.maxPitch : delta + jumpCfg.maxPitch;
-            } else if (axis === 'roll' && Math.abs(delta) > jumpCfg.roll) {
-                delta = delta > 0 ? delta - jumpCfg.maxRoll : delta + jumpCfg.maxRoll;
-            } else if (axis === 'yaw' && Math.abs(delta) > jumpCfg.yaw) {
-                delta = delta > 0 ? delta - jumpCfg.maxYaw : delta + jumpCfg.maxYaw;
-            }
-            return delta;
+
+        // 初始化浏览器信息
+        function initBrowserInfo() {
+            const ua = navigator.userAgent;
+            let kernel = '未知';
+            if (ua.includes('Chrome')) kernel = 'Chrome';
+            else if (ua.includes('Safari')) kernel = 'Safari';
+            else if (ua.includes('Firefox')) kernel = 'Firefox';
+            els.browserInfo.textContent = `${kernel} / v1.0`;
         }
 
-        /**
-         * 判定趋势是否一致（5取3：至少3帧同方向）
-         * @param {array} trend 趋势队列（1=增大，-1=减小，0=无变化）
-         * @returns {number} 0=无趋势，1=增大趋势，-1=减小趋势
-         */
-        function getConsistentTrend(trend) {
-            if (trend.length < DYNAMIC_CONFIG.trendLength) return 0;
-            // 统计增大/减小的帧数
-            const upCount = trend.filter(t => t === 1).length;
-            const downCount = trend.filter(t => t === -1).length;
-            // 5取3判定：至少3帧同方向才视为有效趋势
-            if (upCount >= DYNAMIC_CONFIG.trendValid) return 1;
-            if (downCount >= DYNAMIC_CONFIG.trendValid) return -1;
-            return 0;
-        }
-
-        /**
-         * 动态调整阈值（根据旋转速度）
-         * @param {number} speed 旋转速度
-         * @returns {number} 适配的防抖阈值
-         */
-        function getDynamicThreshold(speed) {
-            return speed > DYNAMIC_CONFIG.fastSpeed
-                ? DYNAMIC_CONFIG.fastThreshold
-                : DYNAMIC_CONFIG.slowThreshold;
-        }
-
-        /**
-         * 处理单轴的累计逻辑（全方向精准+5取3趋势）
-         * @param {string} axis 轴名称
-         * @param {number} current 原始值
-         */
-        function processAxis(axis, current) {
-            const state = axisState[axis];
-            // 1. 计算修正后的Delta
-            const delta = getCorrectedDelta(axis, current, state.prev);
-            // 2. 计算旋转速度（绝对值）
-            state.speed = Math.abs(delta);
-            // 3. 获取动态阈值
-            const threshold = getDynamicThreshold(state.speed);
-
-            // 4. 过滤微小抖动
-            if (Math.abs(delta) < threshold) {
-                state.trend = []; // 清空趋势
-                return 0;
-            }
-
-            // 5. 更新趋势队列（1=增大，-1=减小）
-            state.trend.push(delta > 0 ? 1 : -1);
-            if (state.trend.length > DYNAMIC_CONFIG.trendLength) {
-                state.trend.shift(); // 保持队列长度为5
-            }
-
-            // 6. 判定趋势是否一致（5取3）
-            const trend = getConsistentTrend(state.trend);
-            if (trend === 0) return 0;
-
-            // 7. 轴互斥：仅处理当前有趋势的轴，锁定其他轴
-            Object.keys(axisState).forEach(ax => {
-                axisState[ax].lock = ax !== axis;
+        // 开关切换逻辑
+        function initSwitches() {
+            // 启用控制开关
+            els.ctrlSwitch.addEventListener('click', () => {
+                if (!state.lockUnlocked) return;
+                state.ctrlEnabled = !state.ctrlEnabled;
+                els.ctrlSwitch.classList.toggle('on', state.ctrlEnabled);
+                addDebug(`启用控制${state.ctrlEnabled ? '开启' : '关闭'}`);
             });
 
-            // 8. 精准累计（方向100%匹配）
-            state.total += delta;
-            state.prev = current; // 仅更新当前轴的缓存
-            
-            // 9. 解锁其他轴（累计完成后，手机性能足够，可缩短解锁时间）
-            setTimeout(() => {
-                Object.keys(axisState).forEach(ax => {
-                    axisState[ax].lock = false;
+            // 操作解锁开关
+            els.lockSwitch.addEventListener('click', () => {
+                state.lockUnlocked = !state.lockUnlocked;
+                els.lockSwitch.classList.toggle('on', state.lockUnlocked);
+                // 解锁/锁定输入框
+                const inputs = document.querySelectorAll('input');
+                inputs.forEach(input => {
+                    input.disabled = !state.lockUnlocked;
                 });
-            }, 30); // 手机端缩短至30ms，响应更快
-            
-            return delta;
+                addDebug(`操作解锁${state.lockUnlocked ? '开启' : '关闭'}`);
+            });
+
+            // 陀螺仪开关
+            els.gyroSwitch.addEventListener('click', () => {
+                if (!state.lockUnlocked) return;
+                state.gyroEnabled = !state.gyroEnabled;
+                els.gyroSwitch.classList.toggle('on', state.gyroEnabled);
+                if (state.gyroEnabled) {
+                    startGyro();
+                    addDebug('陀螺仪开启');
+                } else {
+                    stopGyro();
+                    addDebug('陀螺仪关闭');
+                }
+            });
         }
-        
-        // 连接WebSocket
-        function connectWebSocket() {
-            // 使用ESP32的IP地址和WebSocket端口
-            const wsUrl = 'ws://192.168.4.1:81';
-            
-            try {
-                ws = new WebSocket(wsUrl);
-                
-                ws.onopen = function() {
-                    addDebugInfo('WebSocket连接已打开');
-                    wsStatusEl.textContent = '已连接';
-                    wsStatusEl.style.color = '#28a745';
-                };
-                
-                ws.onmessage = function(event) {
-                    const data = event.data;
-                    addDebugInfo('收到消息: ' + data);
-                    
-                    // 处理JSON数据
-                    if (data.startsWith('{')) {
-                        try {
-                            const jsonData = JSON.parse(data);
-                            
-                            // 更新映射角度
-                            if (jsonData.pitch_mapped !== undefined) {
-                                document.getElementById('pitchMapped').textContent = jsonData.pitch_mapped + '°';
-                            }
-                            if (jsonData.roll_mapped !== undefined) {
-                                document.getElementById('rollMapped').textContent = jsonData.roll_mapped + '°';
-                            }
-                            if (jsonData.yaw_mapped !== undefined) {
-                                document.getElementById('yawMapped').textContent = jsonData.yaw_mapped + '°';
-                            }
-                            
-                            // 更新脉宽数值
-                            if (jsonData.pitch_pulse !== undefined) {
-                                document.getElementById('pitchPulse').textContent = jsonData.pitch_pulse + 'us';
-                            }
-                            if (jsonData.roll_pulse !== undefined) {
-                                document.getElementById('rollPulse').textContent = jsonData.roll_pulse + 'us';
-                            }
-                            if (jsonData.yaw_pulse !== undefined) {
-                                document.getElementById('yawPulse').textContent = jsonData.yaw_pulse + 'us';
-                            }
-                        } catch (e) {
-                            addDebugInfo('JSON解析错误: ' + e.message);
-                        }
-                    }
-                };
-                
-                ws.onerror = function(error) {
-                    addDebugInfo('WebSocket错误: ' + error);
-                    wsStatusEl.textContent = '连接错误';
-                    wsStatusEl.style.color = '#dc3545';
-                };
-                
-                ws.onclose = function() {
-                    addDebugInfo('WebSocket连接已关闭');
-                    wsStatusEl.textContent = '未连接';
-                    wsStatusEl.style.color = '#dc3545';
-                    // 尝试重新连接
-                    setTimeout(connectWebSocket, 3000);
-                };
-            } catch (error) {
-                addDebugInfo('WebSocket连接失败: ' + error);
-                wsStatusEl.textContent = '连接失败';
-                wsStatusEl.style.color = '#dc3545';
-                // 尝试重新连接
-                setTimeout(connectWebSocket, 3000);
-            }
+
+        // 映射归零按钮逻辑
+        function initResetBtn() {
+            els.resetBtn.addEventListener('click', () => {
+                if (!state.lockUnlocked || !state.gyroEnabled) return;
+                state.resetBase = { ...state.gyroRaw };
+                addDebug(`映射归零，基准值：P=${state.resetBase.p}, R=${state.resetBase.r}, Y=${state.resetBase.y}`);
+                // 重新计算映射角度
+                calculateMappedAngle();
+            });
         }
-        
-        // 发送数据到ESP32
-        function sendData(pitch, roll, yaw, enabled) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                const data = {
-                    pitch: pitch,
-                    roll: roll,
-                    yaw: yaw,
-                    enabled: enabled ? 1 : 0
-                };
-                ws.send(JSON.stringify(data));
-            }
-        }
-        
-        // 发送配置数据到ESP32
-        function sendConfig() {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                const config = {
-                    controlEnabled: controlEnabled ? 1 : 0,
-                    operationLocked: operationLocked ? 1 : 0,
-                    pitch: {
-                        rate: channelConfig.pitch.rate,
-                        minPulse: channelConfig.pitch.minPulse,
-                        maxPulse: channelConfig.pitch.maxPulse
-                    },
-                    roll: {
-                        rate: channelConfig.roll.rate,
-                        minPulse: channelConfig.roll.minPulse,
-                        maxPulse: channelConfig.roll.maxPulse
-                    },
-                    yaw: {
-                        rate: channelConfig.yaw.rate,
-                        minPulse: channelConfig.yaw.minPulse,
-                        maxPulse: channelConfig.yaw.maxPulse
-                    }
-                };
-                ws.send(JSON.stringify(config));
-            }
-        }
-        
-        // 发送控制指令
-        function sendCommand(command) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(command);
-            }
-        }
-        
-        // 启动陀螺仪
+
+        // 启动陀螺仪监听
         function startGyro() {
             if (!window.DeviceOrientationEvent) {
-                sensorStatusEl.textContent = '设备不支持';
-                sensorStatusEl.style.color = '#dc3545';
-                addDebugInfo('设备不支持陀螺仪');
-                gyroStarted = false;
+                addDebug('当前浏览器不支持陀螺仪');
                 return;
             }
-            
-            sensorStatusEl.textContent = '启动中...';
-            sensorStatusEl.style.color = '#ffc107';
-            addDebugInfo('正在获取陀螺仪权限...');
-            
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        startSensors();
-                        gyroStarted = true; // 权限获取成功，设置为true
-                    } else {
-                        sensorStatusEl.textContent = '权限被拒绝';
-                        sensorStatusEl.style.color = '#dc3545';
-                        addDebugInfo('陀螺仪权限被拒绝');
-                        gyroStarted = false; // 权限被拒绝，重置为false
-                    }
-                }).catch(() => {
-                    sensorStatusEl.textContent = '权限请求失败';
-                    sensorStatusEl.style.color = '#dc3545';
-                    addDebugInfo('陀螺仪权限请求失败');
-                    gyroStarted = false; // 权限请求失败，重置为false
-                });
-            } else {
-                startSensors();
-                gyroStarted = true; // 不需要权限，直接设置为true
-            }
-        }
-        
-        // 设备方向事件处理函数
-        function handleDeviceOrientation(event) {
-            if (!gyroStarted) return;
-            
-            // 原始值（兜底0，避免null）
-            const beta = event.beta ?? 0;     // 俯仰：-180 ~ 180
-            const gamma = event.gamma ?? 0;   // 横滚：-90 ~ 90
-            const alpha = event.alpha ?? 0;   // 偏航：0 ~ 360
-
-            // 首次初始化：仅缓存原始值，不计算差值
-            if (!hasGyroData) {
-                axisState.pitch.prev = beta;
-                axisState.roll.prev = gamma;
-                axisState.yaw.prev = alpha;
-                hasGyroData = true;
-                
-                // 立即更新显示
-                const pitchRaw = axisState.pitch.total.toFixed(1);
-                const rollRaw = axisState.roll.total.toFixed(1);
-                const yawRaw = axisState.yaw.total.toFixed(1);
-                
-                document.getElementById('pitchRaw').textContent = pitchRaw + '°';
-                document.getElementById('rollRaw').textContent = rollRaw + '°';
-                document.getElementById('yawRaw').textContent = yawRaw + '°';
-                
-                // 发送相对角度值到ESP32
-                sendData(
-                    parseFloat(axisState.pitch.total - 3600), 
-                    parseFloat(axisState.roll.total - 3600), 
-                    parseFloat(axisState.yaw.total - 3600), 
-                    controlEnabled
-                );
-                
-                return;
-            }
-
-            // ========== 核心：仅处理未被锁定的轴（互斥） ==========
-            if (!axisState.pitch.lock) {
-                processAxis('pitch', beta);
-            }
-            if (!axisState.roll.lock) {
-                processAxis('roll', gamma);
-            }
-            if (!axisState.yaw.lock) {
-                processAxis('yaw', alpha);
-            }
-
-            // 计算相对角度值（用于发送到ESP32）
-            const pitchRel = axisState.pitch.total - 3600;
-            const rollRel = axisState.roll.total - 3600;
-            const yawRel = axisState.yaw.total - 3600;
-            
-            // 计算映射角度（当前相对角度 - 初始相对角度，即偏移后的角度）
-            const pitchMapped = pitchRel;
-            const rollMapped = rollRel;
-            const yawMapped = yawRel;
-            
-            // 格式化显示
-            const pitchRaw = axisState.pitch.total.toFixed(1);
-            const rollRaw = axisState.roll.total.toFixed(1);
-            const yawRaw = axisState.yaw.total.toFixed(1);
-            
-            // 更新显示
-            document.getElementById('pitchRaw').textContent = pitchRaw + '°';
-            document.getElementById('rollRaw').textContent = rollRaw + '°';
-            document.getElementById('yawRaw').textContent = yawRaw + '°';
-            
-            // 更新映射角度显示
-            document.getElementById('pitchMapped').textContent = pitchMapped.toFixed(1) + '°';
-            document.getElementById('rollMapped').textContent = rollMapped.toFixed(1) + '°';
-            document.getElementById('yawMapped').textContent = yawMapped.toFixed(1) + '°';
-            
-            // 检查映射角度是否超出±180°范围
-            const pitchEl = document.getElementById('pitchMapped');
-            const rollEl = document.getElementById('rollMapped');
-            const yawEl = document.getElementById('yawMapped');
-            
-            // 检查映射角度是否超出±180°范围
-            if (Math.abs(pitchMapped) > 180) {
-                pitchEl.style.color = 'red';
-                pitchEl.style.fontWeight = 'bold';
-                showWarning('超出映射范围请进行姿态归零');
-            } else {
-                pitchEl.style.color = '#007bff';
-                pitchEl.style.fontWeight = 'normal';
-            }
-            
-            if (Math.abs(rollMapped) > 180) {
-                rollEl.style.color = 'red';
-                rollEl.style.fontWeight = 'bold';
-                showWarning('超出映射范围请进行姿态归零');
-            } else {
-                rollEl.style.color = '#007bff';
-                rollEl.style.fontWeight = 'normal';
-            }
-            
-            if (Math.abs(yawMapped) > 180) {
-                yawEl.style.color = 'red';
-                yawEl.style.fontWeight = 'bold';
-                showWarning('超出映射范围请进行姿态归零');
-            } else {
-                yawEl.style.color = '#007bff';
-                yawEl.style.fontWeight = 'normal';
-            }
-            
-            // 发送相对角度值到ESP32
-            sendData(
-                parseFloat(pitchRel), 
-                parseFloat(rollRel), 
-                parseFloat(yawRel), 
-                controlEnabled
-            );
-        }
-        
-        // 开始读取传感器数据
-        function startSensors() {
-            // 重置传感器状态
-            hasGyroData = false;
-            
-            // 重置每个轴的状态
-            Object.keys(axisState).forEach(axis => {
-                axisState[axis].prev = null;
-                axisState[axis].trend = [];
-                axisState[axis].lock = false;
-                axisState[axis].speed = 0;
-            });
-            
-            // 移除旧的事件监听器，防止重复添加
-            window.removeEventListener('deviceorientation', handleDeviceOrientation);
-            // 添加新的事件监听器
-            window.addEventListener('deviceorientation', handleDeviceOrientation);
-            sensorStatusEl.textContent = '已开启';
-            sensorStatusEl.style.color = '#28a745';
-            addDebugInfo('陀螺仪数据读取开始');
-        }
-        
-        // 停止读取传感器数据
-        function stopSensors() {
-            window.removeEventListener('deviceorientation', handleDeviceOrientation);
-            sensorStatusEl.textContent = '已关闭';
-            sensorStatusEl.style.color = '#dc3545';
-        }
-        
-        // 验证RATE值，确保在±50.00范围内
-        function validateRateValue(inputElement) {
-            let value = parseFloat(inputElement.value);
-            if (isNaN(value)) {
-                value = 5.55; // 默认值
-            } else if (value > 50.00) {
-                value = 50.00;
-            } else if (value < -50.00) {
-                value = -50.00;
-            }
-            inputElement.value = value.toFixed(2);
-            return value;
-        }
-        
-        // 更新通道配置
-        function updateChannelConfig() {
-            if (operationLocked) {
-                addDebugInfo('操作已锁定，无法修改配置');
-                return;
-            }
-            
-            // 获取并验证RATE值
-            const pitchRate = validateRateValue(document.getElementById('pitchRate'));
-            const rollRate = validateRateValue(document.getElementById('rollRate'));
-            const yawRate = validateRateValue(document.getElementById('yawRate'));
-            
-            channelConfig.pitch.rate = pitchRate;
-            channelConfig.pitch.minPulse = parseInt(document.getElementById('pitchMin').value);
-            channelConfig.pitch.maxPulse = parseInt(document.getElementById('pitchMax').value);
-            
-            channelConfig.roll.rate = rollRate;
-            channelConfig.roll.minPulse = parseInt(document.getElementById('rollMin').value);
-            channelConfig.roll.maxPulse = parseInt(document.getElementById('rollMax').value);
-            
-            channelConfig.yaw.rate = yawRate;
-            channelConfig.yaw.minPulse = parseInt(document.getElementById('yawMin').value);
-            channelConfig.yaw.maxPulse = parseInt(document.getElementById('yawMax').value);
-            
-            sendConfig();
-            addDebugInfo('通道配置已更新');
-        }
-        
-        // 禁用或启用输入框、按钮和开关
-        function updateUIState() {
-            const inputs = document.querySelectorAll('input[type="number"]');
-            const buttons = document.querySelectorAll('.control-button');
-            const otherSwitches = document.querySelectorAll('input[type="checkbox"]:not(#lockSwitch)'); // 除了操作解锁开关外的所有开关
-            
-            if (operationLocked) {
-                // 锁定状态，禁用所有输入、按钮和其他开关
-                inputs.forEach(input => {
-                    input.disabled = true;
-                    input.style.opacity = '0.5';
-                });
-                buttons.forEach(button => {
-                    button.disabled = true;
-                    button.style.opacity = '0.5';
-                });
-                otherSwitches.forEach(switchEl => {
-                    switchEl.disabled = true;
-                    switchEl.parentElement.style.opacity = '0.5';
-                });
-            } else {
-                // 解锁状态，启用所有输入、按钮和其他开关
-                inputs.forEach(input => {
-                    input.disabled = false;
-                    input.style.opacity = '1';
-                });
-                // 按钮启用，除了舵机回中按钮在控制启用时禁用
-                buttons.forEach(button => {
-                    if (button.id === 'resetServoBtn') {
-                        button.disabled = controlEnabled;
-                        button.style.opacity = controlEnabled ? '0.5' : '1';
-                    } else {
-                        button.disabled = false;
-                        button.style.opacity = '1';
-                    }
-                });
-                otherSwitches.forEach(switchEl => {
-                    switchEl.disabled = false;
-                    switchEl.parentElement.style.opacity = '1';
-                });
-            }
-        }
-        
-        // 事件监听器
-        
-        // 启用控制开关
-        controlSwitch.addEventListener('change', (event) => {
-            controlEnabled = event.target.checked;
-            controlStatusEl.textContent = controlEnabled ? '已启用' : '已禁用';
-            controlStatusEl.style.color = controlEnabled ? '#28a745' : '#dc3545';
-            sendConfig();
-            addDebugInfo('控制状态: ' + (controlEnabled ? '启用' : '禁用'));
-            
-            // 更新UI状态
-            updateUIState();
-        });
-        
-        // 操作解锁开关
-        lockSwitch.addEventListener('change', (event) => {
-            operationLocked = !event.target.checked; // 开关ON时解锁（未锁定），OFF时锁定
-            unlockStatusEl.textContent = event.target.checked ? '已解锁' : '已锁定';
-            unlockStatusEl.style.color = event.target.checked ? '#28a745' : '#dc3545';
-            sendConfig();
-            addDebugInfo('操作解锁状态: ' + (event.target.checked ? '解锁' : '锁定'));
-            
-            // 更新UI状态
-            updateUIState();
-        });
-        
-        // 陀螺仪开关
-        sensorSwitch.addEventListener('change', (event) => {
-            sensorEnabled = event.target.checked;
-            if (sensorEnabled) {
-                if (!gyroStarted) {
-                    // 首次启动，需要获取权限
-                    startGyro();
-                    // 注意：gyroStarted会在startGyro()成功后设置为true
-                } else {
-                    // 已经获得权限，直接启动传感器
-                    startSensors();
+            // 请求权限（部分浏览器需要）
+            DeviceOrientationEvent.requestPermission?.().then(permission => {
+                if (permission !== 'granted') {
+                    addDebug('陀螺仪权限被拒绝');
+                    state.gyroEnabled = false;
+                    els.gyroSwitch.classList.remove('on');
+                    return;
                 }
-            } else {
-                stopSensors();
+                window.addEventListener('deviceorientation', handleGyroData);
+                els.hardwareInfo.textContent = `已开启 / P:0, R:0, Y:0`;
+            }).catch(err => {
+                addDebug(`陀螺仪权限请求失败：${err}`);
+            });
+        }
+
+        // 停止陀螺仪监听
+        function stopGyro() {
+            window.removeEventListener('deviceorientation', handleGyroData);
+            els.hardwareInfo.textContent = `未开启 / P:0, R:0, Y:0`;
+        }
+
+        // 处理陀螺仪数据
+        function handleGyroData(e) {
+            if (!state.gyroEnabled) return;
+            // 获取三轴数据（alpha:偏航, beta:俯仰, gamma:横滚）
+            const p = e.beta || 0; // 俯仰
+            const r = e.gamma || 0; // 横滚
+            const y = e.alpha || 0; // 偏航
+            state.gyroRaw = { p, r, y };
+
+            // 更新原始数值显示
+            els.pRaw.textContent = p.toFixed(2);
+            els.rRaw.textContent = r.toFixed(2);
+            els.yRaw.textContent = y.toFixed(2);
+
+            // 更新硬件信息
+            els.hardwareInfo.textContent = `已开启 / P:${p.toFixed(2)}, R:${r.toFixed(2)}, Y:${y.toFixed(2)}`;
+
+            // 计算映射角度
+            calculateMappedAngle();
+
+            // 计算输出脉宽
+            calculatePwm();
+
+            // 下发数据到ESP32
+            sendToESP32();
+        }
+
+        // 计算映射角度（当前值 - 基准值）
+        function calculateMappedAngle() {
+            const pMapped = (state.gyroRaw.p - state.resetBase.p).toFixed(2);
+            const rMapped = (state.gyroRaw.r - state.resetBase.r).toFixed(2);
+            const yMapped = (state.gyroRaw.y - state.resetBase.y).toFixed(2);
+
+            // 更新映射角度显示
+            els.pMapped.textContent = pMapped;
+            els.rMapped.textContent = rMapped;
+            els.yMapped.textContent = yMapped;
+        }
+
+        // 计算输出脉宽
+        function calculatePwm() {
+            // 俯仰通道
+            const pZero = parseFloat(els.pZero.value);
+            const pRate = parseFloat(els.pRate.value);
+            const pMapped = parseFloat(els.pMapped.textContent);
+            let pPwm = pZero + pRate * pMapped;
+            const pMin = parseFloat(els.pMin.value);
+            const pMax = parseFloat(els.pMax.value);
+            pPwm = Math.max(pMin, Math.min(pMax, pPwm));
+            els.pPwm.textContent = pPwm.toFixed(0);
+
+            // 横滚通道
+            const rZero = parseFloat(els.rZero.value);
+            const rRate = parseFloat(els.rate.value);
+            const rMapped = parseFloat(els.rMapped.textContent);
+            let rPwm = rZero + rRate * rMapped;
+            const rMin = parseFloat(els.rMin.value);
+            const rMax = parseFloat(els.rMax.value);
+            rPwm = Math.max(rMin, Math.min(rMax, rPwm));
+            els.rPwm.textContent = rPwm.toFixed(0);
+
+            // 偏航通道
+            const yZero = parseFloat(els.yZero.value);
+            const yRate = parseFloat(els.yRate.value);
+            const yMapped = parseFloat(els.yMapped.textContent);
+            let yPwm = yZero + yRate * yMapped;
+            const yMin = parseFloat(els.yMin.value);
+            const yMax = parseFloat(els.yMax.value);
+            yPwm = Math.max(yMin, Math.min(yMax, yPwm));
+            els.yPwm.textContent = yPwm.toFixed(0);
+        }
+
+        // 连接WebSocket（ESP32）
+        function connectWS() {
+            // 替换为ESP32的IP地址
+            const esp32Ip = '192.168.4.1'; // ESP32 AP模式默认IP
+            const wsUrl = `ws://${esp32Ip}:81`;
+            state.ws = new WebSocket(wsUrl);
+
+            state.ws.onopen = () => {
+                addDebug(`WebSocket连接成功：${wsUrl}`);
+                els.wifiInfo.textContent = `ESP32-AP / ${esp32Ip}`;
+            };
+
+            state.ws.onclose = () => {
+                addDebug('WebSocket连接断开，5秒后重连');
+                els.wifiInfo.textContent = `未连接 / -`;
+                setTimeout(connectWS, 5000);
+            };
+
+            state.ws.onerror = (err) => {
+                addDebug(`WebSocket错误：${err}`);
+            };
+
+            state.ws.onmessage = (e) => {
+                // 计算延迟
+                state.delay = Date.now() - state.lastSendTime;
+                addDebug(`收到ESP32响应：${e.data}，延迟：${state.delay}ms`);
+            };
+        }
+
+        // 下发数据到ESP32
+        function sendToESP32() {
+            if (!state.ctrlEnabled || !state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+
+            // 构造JSON数据
+            const data = {
+                'P-PIN': parseInt(els.pPin.value),
+                'P-PWM': parseInt(els.pPwm.textContent),
+                'R-PIN': parseInt(els.rPin.value),
+                'R-PWM': parseInt(els.rPwm.textContent),
+                'Y-PIN': parseInt(els.yPin.value),
+                'Y-PWM': parseInt(els.yPwm.textContent)
+            };
+
+            // 发送数据
+            state.lastSendTime = Date.now();
+            state.ws.send(JSON.stringify(data));
+
+            // 统计码率
+            state.sendCount++;
+            const now = Date.now();
+            if (now - state.lastRateTime >= 1000) {
+                const rate = state.sendCount;
+                state.sendCount = 0;
+                state.lastRateTime = now;
+                // 更新界面信息
+                els.uiInfo.textContent = `- / ${rate}Hz / ${state.delay}ms`;
+                addDebug(`码率：${rate}Hz，延迟：${state.delay}ms`);
             }
-            addDebugInfo('传感器状态: ' + (sensorEnabled ? '开启' : '关闭'));
-        });
-        
-        // 舵机回中按钮
-        resetServoBtn.addEventListener('click', () => {
-            if (operationLocked) {
-                addDebugInfo('操作已锁定，无法执行此操作');
-                return;
+        }
+
+        // 添加调试信息
+        function addDebug(msg) {
+            const time = new Date().toLocaleTimeString();
+            const newMsg = `[${time}] ${msg}\n`;
+            els.debugContent.textContent += newMsg;
+            // 只保留最近10条
+            const lines = els.debugContent.textContent.split('\n');
+            if (lines.length > 10) {
+                els.debugContent.textContent = lines.slice(-10).join('\n');
             }
-            if (controlEnabled) {
-                addDebugInfo('启用控制时无法使用舵机回中功能');
-                return;
-            }
-            addDebugInfo('发送舵机回中指令');
-            sendCommand('reset_servo');
-        });
-        
-        // 映射归零按钮
-        resetAttitudeBtn.addEventListener('click', () => {
-            if (operationLocked) {
-                addDebugInfo('操作已锁定，无法执行此操作');
-                return;
-            }
-            addDebugInfo('发送映射归零指令');
-            sendCommand('reset_attitude');
-        });
-        
-        // RATE输入框实时验证
-        document.getElementById('pitchRate').addEventListener('input', function() {
-            validateRateValue(this);
-        });
-        document.getElementById('rollRate').addEventListener('input', function() {
-            validateRateValue(this);
-        });
-        document.getElementById('yawRate').addEventListener('input', function() {
-            validateRateValue(this);
-        });
-        
-        // 通道配置输入变化
-        document.getElementById('pitchRate').addEventListener('change', updateChannelConfig);
-        document.getElementById('pitchMin').addEventListener('change', updateChannelConfig);
-        document.getElementById('pitchMax').addEventListener('change', updateChannelConfig);
-        
-        document.getElementById('rollRate').addEventListener('change', updateChannelConfig);
-        document.getElementById('rollMin').addEventListener('change', updateChannelConfig);
-        document.getElementById('rollMax').addEventListener('change', updateChannelConfig);
-        
-        document.getElementById('yawRate').addEventListener('change', updateChannelConfig);
-        document.getElementById('yawMin').addEventListener('change', updateChannelConfig);
-        document.getElementById('yawMax').addEventListener('change', updateChannelConfig);
-        
-        // 页面加载时尝试连接WebSocket
-        window.addEventListener('load', connectWebSocket);
-        
-        // 初始化状态显示
-        controlStatusEl.textContent = controlEnabled ? '已启用' : '已禁用';
-        controlStatusEl.style.color = controlEnabled ? '#28a745' : '#dc3545';
-        
-        unlockStatusEl.textContent = !operationLocked ? '已解锁' : '已锁定';
-        unlockStatusEl.style.color = !operationLocked ? '#28a745' : '#dc3545';
-        
-        sensorStatusEl.textContent = sensorEnabled ? '已开启' : '已关闭';
-        sensorStatusEl.style.color = sensorEnabled ? '#28a745' : '#dc3545';
-        
-        // 初始化UI状态
-        updateUIState();
-        
-        // 初始化调试信息
-        addDebugInfo('页面加载完成');
+        }
+
+        // 初始化
+        window.onload = () => {
+            initBrowserInfo();
+            initSwitches();
+            initResetBtn();
+            connectWS();
+            addDebug('页面初始化完成');
+        };
     </script>
 </body>
 </html>
