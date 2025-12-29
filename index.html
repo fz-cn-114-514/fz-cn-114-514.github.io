@@ -29,59 +29,142 @@
         const statusEl = document.getElementById('status');
         const startBtn = document.getElementById('startBtn');
         
-        // 1. 累计角度（初始3600，轴完全独立）
-        let pitchTotal = 3600;
-        let rollTotal = 3600;
-        let yawTotal = 3600;
-        
-        // 2. 上一次原始值（每个轴独立缓存）
-        let prevBeta = null;
-        let prevGamma = null;
-        let prevAlpha = null;
-        
-        // 3. 核心阈值配置（彻底过滤耦合干扰）
-        const CONFIG = {
+        // 1. 核心状态管理（每个轴完全独立）
+        const axisState = {
             pitch: {
-                shakeThreshold: 1.0,    // 防抖阈值（过滤<1°的耦合偏移）
-                validDelta: 1.5,        // 有效变化阈值（仅>1.5°才累计）
-                maxRange: 360,          // 原始值总范围
-                jumpThreshold: 180      // 跳变判定阈值
+                total: 3600,          // 累计值（初始3600）
+                prev: null,           // 上一次原始值
+                trend: [],            // 趋势队列（最近5帧delta方向）
+                lock: false,          // 轴互斥锁
+                speed: 0              // 旋转速度（用于动态阈值）
             },
             roll: {
-                shakeThreshold: 1.0,
-                validDelta: 1.5,
-                maxRange: 180,
-                jumpThreshold: 90
+                total: 3600,
+                prev: null,
+                trend: [],
+                lock: false,
+                speed: 0
             },
             yaw: {
-                shakeThreshold: 1.0,
-                validDelta: 1.5,
-                maxRange: 360,
-                jumpThreshold: 180
+                total: 3600,
+                prev: null,
+                trend: [],
+                lock: false,
+                speed: 0
+            }
+        };
+
+        // 2. 动态配置（升级为5取3趋势判定，适配手机高性能）
+        const DYNAMIC_CONFIG = {
+            fastSpeed: 2.0,          // 快速旋转判定阈值（°/帧）
+            slowThreshold: 0.3,      // 慢速旋转防抖阈值
+            fastThreshold: 1.0,      // 快速旋转防抖阈值
+            trendLength: 5,          // 趋势判定帧数（升级为5帧）
+            trendValid: 3,           // 5取3：至少3帧同方向才判定为有效趋势
+            jumpThresholds: {
+                pitch: 180, maxPitch: 360,
+                roll: 90, maxRoll: 180,
+                yaw: 180, maxYaw: 360
             }
         };
 
         /**
-         * 精准修正角度跳变（区分增大/减小方向）
-         * @param {Object} axisConfig 轴配置（防抖/有效阈值等）
+         * 精准修正跳变并计算有效Delta（区分方向）
+         * @param {string} axis 轴名称（pitch/roll/yaw）
          * @param {number} current 当前原始值
-         * @param {number} previous 上一次原始值
-         * @returns {number} 仅返回“有效且非耦合”的差值
+         * @param {number} prev 上一次原始值
+         * @returns {number} 修正后的有效Delta
          */
-        function calculateValidDelta(axisConfig, current, previous) {
-            // 首次无差值/差值过小（防抖）→ 返回0
-            if (previous === null || Math.abs(current - previous) < axisConfig.shakeThreshold) {
-                return 0;
+        function getCorrectedDelta(axis, current, prev) {
+            if (prev === null) return 0;
+            const jumpCfg = DYNAMIC_CONFIG.jumpThresholds;
+            
+            let delta = current - prev;
+            // 修正跳变（精准匹配每个轴的范围）
+            if (axis === 'pitch' && Math.abs(delta) > jumpCfg.pitch) {
+                delta = delta > 0 ? delta - jumpCfg.maxPitch : delta + jumpCfg.maxPitch;
+            } else if (axis === 'roll' && Math.abs(delta) > jumpCfg.roll) {
+                delta = delta > 0 ? delta - jumpCfg.maxRoll : delta + jumpCfg.maxRoll;
+            } else if (axis === 'yaw' && Math.abs(delta) > jumpCfg.yaw) {
+                delta = delta > 0 ? delta - jumpCfg.maxYaw : delta + jumpCfg.maxYaw;
+            }
+            return delta;
+        }
+
+        /**
+         * 判定趋势是否一致（5取3：至少3帧同方向）
+         * @param {array} trend 趋势队列（1=增大，-1=减小，0=无变化）
+         * @returns {number} 0=无趋势，1=增大趋势，-1=减小趋势
+         */
+        function getConsistentTrend(trend) {
+            if (trend.length < DYNAMIC_CONFIG.trendLength) return 0;
+            // 统计增大/减小的帧数
+            const upCount = trend.filter(t => t === 1).length;
+            const downCount = trend.filter(t => t === -1).length;
+            // 5取3判定：至少3帧同方向才视为有效趋势
+            if (upCount >= DYNAMIC_CONFIG.trendValid) return 1;
+            if (downCount >= DYNAMIC_CONFIG.trendValid) return -1;
+            return 0;
+        }
+
+        /**
+         * 动态调整阈值（根据旋转速度）
+         * @param {number} speed 旋转速度
+         * @returns {number} 适配的防抖阈值
+         */
+        function getDynamicThreshold(speed) {
+            return speed > DYNAMIC_CONFIG.fastSpeed 
+                ? DYNAMIC_CONFIG.fastThreshold 
+                : DYNAMIC_CONFIG.slowThreshold;
+        }
+
+        /**
+         * 处理单轴的累计逻辑（全方向精准+5取3趋势）
+         * @param {string} axis 轴名称
+         * @param {number} current 原始值
+         */
+        function processAxis(axis, current) {
+            const state = axisState[axis];
+            // 1. 计算修正后的Delta
+            const delta = getCorrectedDelta(axis, current, state.prev);
+            // 2. 计算旋转速度（绝对值）
+            state.speed = Math.abs(delta);
+            // 3. 获取动态阈值
+            const threshold = getDynamicThreshold(state.speed);
+
+            // 4. 过滤微小抖动
+            if (Math.abs(delta) < threshold) {
+                state.trend = []; // 清空趋势
+                return;
             }
 
-            let delta = current - previous;
-            // 修正跳变（精准区分增大/减小方向）
-            if (Math.abs(delta) > axisConfig.jumpThreshold) {
-                delta = delta > 0 ? (delta - axisConfig.maxRange) : (delta + axisConfig.maxRange);
+            // 5. 更新趋势队列（1=增大，-1=减小）
+            state.trend.push(delta > 0 ? 1 : -1);
+            if (state.trend.length > DYNAMIC_CONFIG.trendLength) {
+                state.trend.shift(); // 保持队列长度为5
             }
 
-            // 仅当差值超过有效阈值时，才返回真实差值（否则返回0）
-            return Math.abs(delta) >= axisConfig.validDelta ? delta : 0;
+            // 6. 判定趋势是否一致（5取3）
+            const trend = getConsistentTrend(state.trend);
+            if (trend === 0) return;
+
+            // 7. 轴互斥：仅处理当前有趋势的轴，锁定其他轴
+            Object.keys(axisState).forEach(ax => {
+                axisState[ax].lock = ax !== axis;
+            });
+
+            // 8. 精准累计（方向100%匹配）
+            state.total += delta;
+            state.prev = current; // 仅更新当前轴的缓存
+            // 9. 更新显示
+            document.getElementById(axis).textContent = state.total.toFixed(1);
+
+            // 10. 解锁其他轴（累计完成后，手机性能足够，可缩短解锁时间）
+            setTimeout(() => {
+                Object.keys(axisState).forEach(ax => {
+                    axisState[ax].lock = false;
+                });
+            }, 30); // 手机端缩短至30ms，响应更快
         }
 
         function startGyro() {
@@ -119,46 +202,25 @@
                 const gamma = event.gamma ?? 0;   // 横滚：-90 ~ 90
                 const alpha = event.alpha ?? 0;   // 偏航：0 ~ 360
 
-                // 首次初始化：仅缓存原始值，不计算差值
+                // 首次初始化：仅缓存原始值，不计算
                 if (!hasData) {
-                    prevBeta = beta;
-                    prevGamma = gamma;
-                    prevAlpha = alpha;
+                    axisState.pitch.prev = beta;
+                    axisState.roll.prev = gamma;
+                    axisState.yaw.prev = alpha;
                     hasData = true;
                     statusEl.textContent = '数据读取中';
                     return;
                 }
 
-                // ========== 俯仰轴（100%独立，完全过滤横滚耦合） ==========
-                const pitchDelta = calculateValidDelta(CONFIG.pitch, beta, prevBeta);
-                if (pitchDelta !== 0) {
-                    // 额外判定：仅当俯仰变化远大于横滚变化时，才累计（彻底解耦）
-                    const rollTempDelta = Math.abs(gamma - prevGamma);
-                    if (Math.abs(pitchDelta) > rollTempDelta * 2) {
-                        pitchTotal += pitchDelta;
-                        prevBeta = beta; // 仅更新俯仰缓存
-                        document.getElementById('pitch').textContent = pitchTotal.toFixed(1);
-                    }
+                // ========== 核心：仅处理未被锁定的轴（互斥） ==========
+                if (!axisState.pitch.lock) {
+                    processAxis('pitch', beta);
                 }
-
-                // ========== 横滚轴（100%独立，完全过滤俯仰耦合） ==========
-                const rollDelta = calculateValidDelta(CONFIG.roll, gamma, prevGamma);
-                if (rollDelta !== 0) {
-                    // 额外判定：仅当横滚变化远大于俯仰变化时，才累计（彻底解耦）
-                    const pitchTempDelta = Math.abs(beta - prevBeta);
-                    if (Math.abs(rollDelta) > pitchTempDelta * 2) {
-                        rollTotal += rollDelta;
-                        prevGamma = gamma; // 仅更新横滚缓存
-                        document.getElementById('roll').textContent = rollTotal.toFixed(1);
-                    }
+                if (!axisState.roll.lock) {
+                    processAxis('roll', gamma);
                 }
-
-                // ========== 偏航轴（独立无干扰） ==========
-                const yawDelta = calculateValidDelta(CONFIG.yaw, alpha, prevAlpha);
-                if (yawDelta !== 0) {
-                    yawTotal += yawDelta;
-                    prevAlpha = alpha;
-                    document.getElementById('yaw').textContent = yawTotal.toFixed(1);
+                if (!axisState.yaw.lock) {
+                    processAxis('yaw', alpha);
                 }
             });
             
