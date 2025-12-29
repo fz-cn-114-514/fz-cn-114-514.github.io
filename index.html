@@ -580,17 +580,20 @@
             pitch: {
                 rate: 5.55,
                 minPulse: 500,
-                maxPulse: 2500
+                maxPulse: 2500,
+                offset: 0  // 姿态归零偏移量
             },
             roll: {
                 rate: 5.55,
                 minPulse: 500,
-                maxPulse: 2500
+                maxPulse: 2500,
+                offset: 0
             },
             yaw: {
                 rate: 5.55,
                 minPulse: 500,
-                maxPulse: 2500
+                maxPulse: 2500,
+                offset: 0
             }
         };
         
@@ -876,15 +879,9 @@
             }
         }
         
-        // 发送数据到ESP32
-        function sendData(pitch, roll, yaw, enabled) {
+        // 发送数据到ESP32（支持简化JSON格式）
+        function sendData(data) {
             if (ws && ws.readyState === WebSocket.OPEN) {
-                const data = {
-                    pitch: pitch,
-                    roll: roll,
-                    yaw: yaw,
-                    enabled: enabled ? 1 : 0
-                };
                 ws.send(JSON.stringify(data));
             }
         }
@@ -984,14 +981,6 @@
                 document.getElementById('rollRaw').textContent = rollRaw + '°';
                 document.getElementById('yawRaw').textContent = yawRaw + '°';
                 
-                // 发送相对角度值到ESP32
-                sendData(
-                    parseFloat(axisState.pitch.total - 3600), 
-                    parseFloat(axisState.roll.total - 3600), 
-                    parseFloat(axisState.yaw.total - 3600), 
-                    controlEnabled
-                );
-                
                 return;
             }
 
@@ -1006,29 +995,55 @@
                 processAxis('yaw', alpha);
             }
 
-            // 计算相对角度值（用于发送到ESP32）
+            // 计算相对角度值
             const pitchRel = axisState.pitch.total - 3600;
             const rollRel = axisState.roll.total - 3600;
             const yawRel = axisState.yaw.total - 3600;
             
-            // 计算映射角度（当前相对角度 - 初始相对角度）
-            const pitchMapped = pitchRel;
-            const rollMapped = rollRel;
-            const yawMapped = yawRel;
+            // 计算映射角度（当前相对角度 - 偏移量）
+            const pitchMapped = pitchRel - channelConfig.pitch.offset;
+            const rollMapped = rollRel - channelConfig.roll.offset;
+            const yawMapped = yawRel - channelConfig.yaw.offset;
+            
+            // 限制映射角度在±180°范围内
+            const pitchMappedLimited = Math.max(-180, Math.min(180, pitchMapped));
+            const rollMappedLimited = Math.max(-180, Math.min(180, rollMapped));
+            const yawMappedLimited = Math.max(-180, Math.min(180, yawMapped));
+            
+            // 计算脉宽：1500 + (映射角度 * rate)
+            let pitchPulse = 1500 + (pitchMappedLimited * channelConfig.pitch.rate);
+            let rollPulse = 1500 + (rollMappedLimited * channelConfig.roll.rate);
+            let yawPulse = 1500 + (yawMappedLimited * channelConfig.yaw.rate);
+            
+            // 限制脉宽在最小和最大值之间
+            pitchPulse = Math.max(channelConfig.pitch.minPulse, Math.min(channelConfig.pitch.maxPulse, pitchPulse));
+            rollPulse = Math.max(channelConfig.roll.minPulse, Math.min(channelConfig.roll.maxPulse, rollPulse));
+            yawPulse = Math.max(channelConfig.yaw.minPulse, Math.min(channelConfig.yaw.maxPulse, yawPulse));
             
             // 格式化显示
             const pitchRaw = axisState.pitch.total.toFixed(1);
             const rollRaw = axisState.roll.total.toFixed(1);
             const yawRaw = axisState.yaw.total.toFixed(1);
             
-            // 更新显示，并添加超出范围警告
-            const pitchEl = document.getElementById('pitchRaw');
-            const rollEl = document.getElementById('rollRaw');
-            const yawEl = document.getElementById('yawRaw');
+            // 更新显示
+            document.getElementById('pitchRaw').textContent = pitchRaw + '°';
+            document.getElementById('rollRaw').textContent = rollRaw + '°';
+            document.getElementById('yawRaw').textContent = yawRaw + '°';
             
-            pitchEl.textContent = pitchRaw + '°';
-            rollEl.textContent = rollRaw + '°';
-            yawEl.textContent = yawRaw + '°';
+            // 更新映射角度显示
+            document.getElementById('pitchMapped').textContent = pitchMappedLimited.toFixed(1) + '°';
+            document.getElementById('rollMapped').textContent = rollMappedLimited.toFixed(1) + '°';
+            document.getElementById('yawMapped').textContent = yawMappedLimited.toFixed(1) + '°';
+            
+            // 更新脉宽显示
+            document.getElementById('pitchPulse').textContent = Math.round(pitchPulse) + 'us';
+            document.getElementById('rollPulse').textContent = Math.round(rollPulse) + 'us';
+            document.getElementById('yawPulse').textContent = Math.round(yawPulse) + 'us';
+            
+            // 检查映射角度是否超出±180°范围
+            const pitchEl = document.getElementById('pitchMapped');
+            const rollEl = document.getElementById('rollMapped');
+            const yawEl = document.getElementById('yawMapped');
             
             // 检查映射角度是否超出±180°范围
             if (Math.abs(pitchMapped) > 180) {
@@ -1058,13 +1073,15 @@
                 yawEl.style.fontWeight = 'normal';
             }
             
-            // 发送相对角度值到ESP32
-            sendData(
-                parseFloat(pitchRel), 
-                parseFloat(rollRel), 
-                parseFloat(yawRel), 
-                controlEnabled
-            );
+            // 发送简化的JSON到ESP32：{s1:1500, s2:1525, s3:2525}
+            if (controlEnabled) {
+                const simplifiedData = {
+                    s1: Math.round(pitchPulse),
+                    s2: Math.round(rollPulse),
+                    s3: Math.round(yawPulse)
+                };
+                sendData(simplifiedData);
+            }
         }
         
         // 开始读取传感器数据
