@@ -368,7 +368,7 @@
             </div>
             
             <div class="toggle-group">
-                <span class="toggle-label">传感器开关</span>
+                <span class="toggle-label">陀螺仪开关</span>
                 <label class="custom-toggle">
                     <input type="checkbox" id="sensorSwitch">
                     <span class="custom-slider"></span>
@@ -530,7 +530,7 @@
             <div class="info-title">使用说明</div>
             <div class="info-content">
                 <p>1. 连接ESP32_Gyroscope热点后自动进入此页面</p>
-                <p>2. 点击"传感器开关"开启陀螺仪数据采集</p>
+                <p>2. 点击"陀螺仪开关"开启陀螺仪数据采集</p>
                 <p>3. 调整各通道的每度脉宽和脉宽范围</p>
                 <p>4. 使用"启用控制"开关控制陀螺仪对舵机的影响</p>
                 <p>5. 使用"锁屏开关"防止误触操作</p>
@@ -731,6 +731,7 @@
                 sensorStatusEl.textContent = '设备不支持';
                 sensorStatusEl.style.color = '#dc3545';
                 addDebugInfo('设备不支持陀螺仪');
+                gyroStarted = false;
                 return;
             }
             
@@ -742,18 +743,22 @@
                 DeviceOrientationEvent.requestPermission().then(permission => {
                     if (permission === 'granted') {
                         startSensors();
+                        gyroStarted = true; // 权限获取成功，设置为true
                     } else {
                         sensorStatusEl.textContent = '权限被拒绝';
                         sensorStatusEl.style.color = '#dc3545';
                         addDebugInfo('陀螺仪权限被拒绝');
+                        gyroStarted = false; // 权限被拒绝，重置为false
                     }
                 }).catch(() => {
                     sensorStatusEl.textContent = '权限请求失败';
                     sensorStatusEl.style.color = '#dc3545';
                     addDebugInfo('陀螺仪权限请求失败');
+                    gyroStarted = false; // 权限请求失败，重置为false
                 });
             } else {
                 startSensors();
+                gyroStarted = true; // 不需要权限，直接设置为true
             }
         }
         
@@ -885,14 +890,14 @@
             updateUIState();
         });
         
-        // 传感器开关
+        // 陀螺仪开关
         sensorSwitch.addEventListener('change', (event) => {
             sensorEnabled = event.target.checked;
             if (sensorEnabled) {
                 if (!gyroStarted) {
                     // 首次启动，需要获取权限
                     startGyro();
-                    gyroStarted = true;
+                    // 注意：gyroStarted会在startGyro()成功后设置为true
                 } else {
                     // 已经获得权限，直接启动传感器
                     startSensors();
