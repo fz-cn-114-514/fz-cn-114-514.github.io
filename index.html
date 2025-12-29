@@ -60,6 +60,22 @@
             color: #333;
         }
         
+        /* 按钮组样式 */
+        .button-group {
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .button-label {
+            font-weight: bold;
+            font-size: 24px;
+            color: #333;
+        }
+        
         /* 自定义开关样式 */
         .custom-toggle {
             position: relative;
@@ -349,8 +365,9 @@
     <div class="container">
         <h2>ESP32手机陀螺仪控制舵机by_fzcn</h2>
         
-        <!-- 开关部分 -->
+        <!-- 顶行控制区域 -->
         <div class="toggle-section">
+            <!-- 开关1：启用控制 -->
             <div class="toggle-group">
                 <span class="toggle-label">启用控制</span>
                 <label class="custom-toggle">
@@ -359,6 +376,7 @@
                 </label>
             </div>
             
+            <!-- 开关2：操作解锁 -->
             <div class="toggle-group">
                 <span class="toggle-label">操作解锁</span>
                 <label class="custom-toggle">
@@ -367,6 +385,7 @@
                 </label>
             </div>
             
+            <!-- 开关3：陀螺仪开关 -->
             <div class="toggle-group">
                 <span class="toggle-label">陀螺仪开关</span>
                 <label class="custom-toggle">
@@ -374,19 +393,19 @@
                     <span class="custom-slider"></span>
                 </label>
             </div>
-        </div>
-        
-        <!-- 按钮部分 -->
-        <div class="button-section">
-            <button class="control-button" id="resetServoBtn">舵机回中</button>
-            <button class="control-button" id="resetAttitudeBtn">映射归零</button>
+            
+            <!-- 按钮：映射归零 -->
+            <div class="button-group">
+                <span class="button-label">映射归零</span>
+                <button class="control-button" id="resetAttitudeBtn">映射归零</button>
+            </div>
         </div>
         
         <!-- 通道配置 - Pitch -->
         <div class="channel-section">
             <div class="channel-title">俯仰角 (Pitch)</div>
             
-            <!-- 行一：原始数据、映射角度、每度脉宽 -->
+            <!-- 行一：传感器原始数据、映射角度、映射引脚、每度脉宽 -->
             <div class="channel-row">
                 <div class="channel-col">
                     <div class="value-label">传感器原始数据</div>
@@ -399,12 +418,17 @@
                 </div>
                 
                 <div class="channel-col">
+                    <div class="value-label">映射引脚</div>
+                    <input type="number" id="pitchPin" step="1" min="1" max="40" value="12" placeholder="PIN">
+                </div>
+                
+                <div class="channel-col">
                     <div class="value-label">每度脉宽 (Rate)</div>
                     <input type="number" id="pitchRate" step="0.01" min="-50.00" max="50.00" value="5.55">
                 </div>
             </div>
             
-            <!-- 行二：最小脉宽、当前脉宽、最大脉宽 -->
+            <!-- 行二：最小脉宽、当前脉宽、0度对应脉宽、最大脉宽 -->
             <div class="channel-row">
                 <div class="channel-col">
                     <div class="value-label">最小脉宽</div>
@@ -414,6 +438,11 @@
                 <div class="channel-col">
                     <div class="value-label">当前脉宽</div>
                     <div id="pitchPulse" class="value-display">1500us</div>
+                </div>
+                
+                <div class="channel-col">
+                    <div class="value-label">0度对应脉宽</div>
+                    <input type="number" id="pitchMid" step="1" min="500" max="2500" value="1500">
                 </div>
                 
                 <div class="channel-col">
@@ -427,7 +456,7 @@
         <div class="channel-section">
             <div class="channel-title">横滚角 (Roll)</div>
             
-            <!-- 行一：原始数据、映射角度、每度脉宽 -->
+            <!-- 行一：传感器原始数据、映射角度、映射引脚、每度脉宽 -->
             <div class="channel-row">
                 <div class="channel-col">
                     <div class="value-label">传感器原始数据</div>
@@ -440,12 +469,17 @@
                 </div>
                 
                 <div class="channel-col">
+                    <div class="value-label">映射引脚</div>
+                    <input type="number" id="rollPin" step="1" min="1" max="40" value="13" placeholder="PIN">
+                </div>
+                
+                <div class="channel-col">
                     <div class="value-label">每度脉宽 (Rate)</div>
                     <input type="number" id="rollRate" step="0.01" min="-50.00" max="50.00" value="5.55">
                 </div>
             </div>
             
-            <!-- 行二：最小脉宽、当前脉宽、最大脉宽 -->
+            <!-- 行二：最小脉宽、当前脉宽、0度对应脉宽、最大脉宽 -->
             <div class="channel-row">
                 <div class="channel-col">
                     <div class="value-label">最小脉宽</div>
@@ -455,6 +489,11 @@
                 <div class="channel-col">
                     <div class="value-label">当前脉宽</div>
                     <div id="rollPulse" class="value-display">1500us</div>
+                </div>
+                
+                <div class="channel-col">
+                    <div class="value-label">0度对应脉宽</div>
+                    <input type="number" id="rollMid" step="1" min="500" max="2500" value="1500">
                 </div>
                 
                 <div class="channel-col">
@@ -468,7 +507,7 @@
         <div class="channel-section">
             <div class="channel-title">偏航角 (Yaw)</div>
             
-            <!-- 行一：原始数据、映射角度、每度脉宽 -->
+            <!-- 行一：传感器原始数据、映射角度、映射引脚、每度脉宽 -->
             <div class="channel-row">
                 <div class="channel-col">
                     <div class="value-label">传感器原始数据</div>
@@ -481,12 +520,17 @@
                 </div>
                 
                 <div class="channel-col">
+                    <div class="value-label">映射引脚</div>
+                    <input type="number" id="yawPin" step="1" min="1" max="40" value="14" placeholder="PIN">
+                </div>
+                
+                <div class="channel-col">
                     <div class="value-label">每度脉宽 (Rate)</div>
                     <input type="number" id="yawRate" step="0.01" min="-50.00" max="50.00" value="5.55">
                 </div>
             </div>
             
-            <!-- 行二：最小脉宽、当前脉宽、最大脉宽 -->
+            <!-- 行二：最小脉宽、当前脉宽、0度对应脉宽、最大脉宽 -->
             <div class="channel-row">
                 <div class="channel-col">
                     <div class="value-label">最小脉宽</div>
@@ -496,6 +540,11 @@
                 <div class="channel-col">
                     <div class="value-label">当前脉宽</div>
                     <div id="yawPulse" class="value-display">1500us</div>
+                </div>
+                
+                <div class="channel-col">
+                    <div class="value-label">0度对应脉宽</div>
+                    <input type="number" id="yawMid" step="1" min="500" max="2500" value="1500">
                 </div>
                 
                 <div class="channel-col">
@@ -578,20 +627,26 @@
         // 通道配置
         let channelConfig = {
             pitch: {
+                pin: 12,
                 rate: 5.55,
                 minPulse: 500,
+                midPulse: 1500,
                 maxPulse: 2500,
                 offset: 0  // 姿态归零偏移量
             },
             roll: {
+                pin: 13,
                 rate: 5.55,
                 minPulse: 500,
+                midPulse: 1500,
                 maxPulse: 2500,
                 offset: 0
             },
             yaw: {
+                pin: 14,
                 rate: 5.55,
                 minPulse: 500,
+                midPulse: 1500,
                 maxPulse: 2500,
                 offset: 0
             }
@@ -1001,19 +1056,24 @@
             const yawRel = axisState.yaw.total - 3600;
             
             // 计算映射角度（当前相对角度 - 偏移量）
-            const pitchMapped = pitchRel - channelConfig.pitch.offset;
-            const rollMapped = rollRel - channelConfig.roll.offset;
-            const yawMapped = yawRel - channelConfig.yaw.offset;
+            let pitchMapped = pitchRel - channelConfig.pitch.offset;
+            let rollMapped = rollRel - channelConfig.roll.offset;
+            let yawMapped = yawRel - channelConfig.yaw.offset;
             
-            // 限制映射角度在±180°范围内
-            const pitchMappedLimited = Math.max(-180, Math.min(180, pitchMapped));
-            const rollMappedLimited = Math.max(-180, Math.min(180, rollMapped));
-            const yawMappedLimited = Math.max(-180, Math.min(180, yawMapped));
+            // 显示完整映射角度（用于用户参考）
+            const pitchMappedDisplay = pitchMapped;
+            const rollMappedDisplay = rollMapped;
+            const yawMappedDisplay = yawMapped;
             
-            // 计算脉宽：1500 + (映射角度 * rate)
-            let pitchPulse = 1500 + (pitchMappedLimited * channelConfig.pitch.rate);
-            let rollPulse = 1500 + (rollMappedLimited * channelConfig.roll.rate);
-            let yawPulse = 1500 + (yawMappedLimited * channelConfig.yaw.rate);
+            // 参与控制的映射角度：仅取±180°之间的值
+            const pitchMappedControl = Math.max(-180, Math.min(180, pitchMapped));
+            const rollMappedControl = Math.max(-180, Math.min(180, rollMapped));
+            const yawMappedControl = Math.max(-180, Math.min(180, yawMapped));
+            
+            // 计算脉宽：midPulse + (控制映射角度 * rate)
+            let pitchPulse = channelConfig.pitch.midPulse + (pitchMappedControl * channelConfig.pitch.rate);
+            let rollPulse = channelConfig.roll.midPulse + (rollMappedControl * channelConfig.roll.rate);
+            let yawPulse = channelConfig.yaw.midPulse + (yawMappedControl * channelConfig.yaw.rate);
             
             // 限制脉宽在最小和最大值之间
             pitchPulse = Math.max(channelConfig.pitch.minPulse, Math.min(channelConfig.pitch.maxPulse, pitchPulse));
@@ -1030,10 +1090,10 @@
             document.getElementById('rollRaw').textContent = rollRaw + '°';
             document.getElementById('yawRaw').textContent = yawRaw + '°';
             
-            // 更新映射角度显示
-            document.getElementById('pitchMapped').textContent = pitchMappedLimited.toFixed(1) + '°';
-            document.getElementById('rollMapped').textContent = rollMappedLimited.toFixed(1) + '°';
-            document.getElementById('yawMapped').textContent = yawMappedLimited.toFixed(1) + '°';
+            // 更新映射角度显示（显示完整值，用于用户参考）
+            document.getElementById('pitchMapped').textContent = pitchMappedDisplay.toFixed(1) + '°';
+            document.getElementById('rollMapped').textContent = rollMappedDisplay.toFixed(1) + '°';
+            document.getElementById('yawMapped').textContent = yawMappedDisplay.toFixed(1) + '°';
             
             // 更新脉宽显示
             document.getElementById('pitchPulse').textContent = Math.round(pitchPulse) + 'us';
@@ -1046,7 +1106,7 @@
             const yawEl = document.getElementById('yawMapped');
             
             // 检查映射角度是否超出±180°范围
-            if (Math.abs(pitchMapped) > 180) {
+            if (Math.abs(pitchMappedDisplay) > 180) {
                 pitchEl.style.color = 'red';
                 pitchEl.style.fontWeight = 'bold';
                 showWarning('超出映射范围请进行姿态归零');
@@ -1055,7 +1115,7 @@
                 pitchEl.style.fontWeight = 'normal';
             }
             
-            if (Math.abs(rollMapped) > 180) {
+            if (Math.abs(rollMappedDisplay) > 180) {
                 rollEl.style.color = 'red';
                 rollEl.style.fontWeight = 'bold';
                 showWarning('超出映射范围请进行姿态归零');
@@ -1064,7 +1124,7 @@
                 rollEl.style.fontWeight = 'normal';
             }
             
-            if (Math.abs(yawMapped) > 180) {
+            if (Math.abs(yawMappedDisplay) > 180) {
                 yawEl.style.color = 'red';
                 yawEl.style.fontWeight = 'bold';
                 showWarning('超出映射范围请进行姿态归零');
@@ -1073,12 +1133,12 @@
                 yawEl.style.fontWeight = 'normal';
             }
             
-            // 发送简化的JSON到ESP32：{s1:1500, s2:1525, s3:2525}
+            // 发送简化的JSON到ESP32：{"PIN":12,"PWM":1500,"PIN":13,"PWM":1525,"PIN":14,"PWM":2525}
             if (controlEnabled) {
                 const simplifiedData = {
-                    s1: Math.round(pitchPulse),
-                    s2: Math.round(rollPulse),
-                    s3: Math.round(yawPulse)
+                    [channelConfig.pitch.pin]: Math.round(pitchPulse),
+                    [channelConfig.roll.pin]: Math.round(rollPulse),
+                    [channelConfig.yaw.pin]: Math.round(yawPulse)
                 };
                 sendData(simplifiedData);
             }
@@ -1139,16 +1199,22 @@
             const rollRate = validateRateValue(document.getElementById('rollRate'));
             const yawRate = validateRateValue(document.getElementById('yawRate'));
             
+            channelConfig.pitch.pin = parseInt(document.getElementById('pitchPin').value);
             channelConfig.pitch.rate = pitchRate;
             channelConfig.pitch.minPulse = parseInt(document.getElementById('pitchMin').value);
+            channelConfig.pitch.midPulse = parseInt(document.getElementById('pitchMid').value);
             channelConfig.pitch.maxPulse = parseInt(document.getElementById('pitchMax').value);
             
+            channelConfig.roll.pin = parseInt(document.getElementById('rollPin').value);
             channelConfig.roll.rate = rollRate;
             channelConfig.roll.minPulse = parseInt(document.getElementById('rollMin').value);
+            channelConfig.roll.midPulse = parseInt(document.getElementById('rollMid').value);
             channelConfig.roll.maxPulse = parseInt(document.getElementById('rollMax').value);
             
+            channelConfig.yaw.pin = parseInt(document.getElementById('yawPin').value);
             channelConfig.yaw.rate = yawRate;
             channelConfig.yaw.minPulse = parseInt(document.getElementById('yawMin').value);
+            channelConfig.yaw.midPulse = parseInt(document.getElementById('yawMid').value);
             channelConfig.yaw.maxPulse = parseInt(document.getElementById('yawMax').value);
             
             sendConfig();
@@ -1181,15 +1247,10 @@
                     input.disabled = false;
                     input.style.opacity = '1';
                 });
-                // 按钮启用，除了舵机回中按钮在控制启用时禁用
+                // 所有按钮启用
                 buttons.forEach(button => {
-                    if (button.id === 'resetServoBtn') {
-                        button.disabled = controlEnabled;
-                        button.style.opacity = controlEnabled ? '0.5' : '1';
-                    } else {
-                        button.disabled = false;
-                        button.style.opacity = '1';
-                    }
+                    button.disabled = false;
+                    button.style.opacity = '1';
                 });
                 otherSwitches.forEach(switchEl => {
                     switchEl.disabled = false;
@@ -1242,20 +1303,6 @@
             addDebugInfo('传感器状态: ' + (sensorEnabled ? '开启' : '关闭'));
         });
         
-        // 舵机回中按钮
-        resetServoBtn.addEventListener('click', () => {
-            if (operationLocked) {
-                addDebugInfo('操作已锁定，无法执行此操作');
-                return;
-            }
-            if (controlEnabled) {
-                addDebugInfo('启用控制时无法使用舵机回中功能');
-                return;
-            }
-            addDebugInfo('发送舵机回中指令');
-            sendCommand('reset_servo');
-        });
-        
         // 映射归零按钮
         resetAttitudeBtn.addEventListener('click', () => {
             if (operationLocked) {
@@ -1278,16 +1325,22 @@
         });
         
         // 通道配置输入变化
+        document.getElementById('pitchPin').addEventListener('change', updateChannelConfig);
         document.getElementById('pitchRate').addEventListener('change', updateChannelConfig);
         document.getElementById('pitchMin').addEventListener('change', updateChannelConfig);
+        document.getElementById('pitchMid').addEventListener('change', updateChannelConfig);
         document.getElementById('pitchMax').addEventListener('change', updateChannelConfig);
         
+        document.getElementById('rollPin').addEventListener('change', updateChannelConfig);
         document.getElementById('rollRate').addEventListener('change', updateChannelConfig);
         document.getElementById('rollMin').addEventListener('change', updateChannelConfig);
+        document.getElementById('rollMid').addEventListener('change', updateChannelConfig);
         document.getElementById('rollMax').addEventListener('change', updateChannelConfig);
         
+        document.getElementById('yawPin').addEventListener('change', updateChannelConfig);
         document.getElementById('yawRate').addEventListener('change', updateChannelConfig);
         document.getElementById('yawMin').addEventListener('change', updateChannelConfig);
+        document.getElementById('yawMid').addEventListener('change', updateChannelConfig);
         document.getElementById('yawMax').addEventListener('change', updateChannelConfig);
         
         // 页面加载时尝试连接WebSocket
