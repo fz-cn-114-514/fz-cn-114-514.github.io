@@ -649,6 +649,62 @@
             }
         }
         
+        // 显示警告信息
+        function showWarning(text) {
+            // 检查是否已有警告信息
+            let warningEl = document.getElementById('rangeWarning');
+            if (!warningEl) {
+                // 创建警告元素
+                warningEl = document.createElement('div');
+                warningEl.id = 'rangeWarning';
+                warningEl.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: red;
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 10px;
+                    font-size: 24px;
+                    font-weight: bold;
+                    z-index: 1000;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                    animation: fadeInOut 3s ease-in-out;
+                `;
+                
+                // 添加动画样式
+                const styleEl = document.createElement('style');
+                styleEl.textContent = `
+                    @keyframes fadeInOut {
+                        0% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+                        20% { opacity: 1; transform: translateX(-50%) translateY(0); }
+                        80% { opacity: 1; transform: translateX(-50%) translateY(0); }
+                        100% { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+                    }
+                `;
+                document.head.appendChild(styleEl);
+                
+                document.body.appendChild(warningEl);
+            }
+            
+            // 更新警告文本
+            warningEl.textContent = text;
+            
+            // 重置动画
+            warningEl.style.animation = 'none';
+            setTimeout(() => {
+                warningEl.style.animation = 'fadeInOut 3s ease-in-out';
+            }, 10);
+            
+            // 3秒后移除警告
+            setTimeout(() => {
+                if (warningEl.parentNode) {
+                    warningEl.parentNode.removeChild(warningEl);
+                }
+            }, 3000);
+        }
+        
         /**
          * 精准修正跳变并计算有效Delta（区分方向）
          * @param {string} axis 轴名称（pitch/roll/yaw）
@@ -919,7 +975,7 @@
                 axisState.yaw.prev = alpha;
                 hasGyroData = true;
                 
-                // 立即更新显示和发送数据
+                // 立即更新显示
                 const pitchRaw = axisState.pitch.total.toFixed(1);
                 const rollRaw = axisState.roll.total.toFixed(1);
                 const yawRaw = axisState.yaw.total.toFixed(1);
@@ -928,11 +984,11 @@
                 document.getElementById('rollRaw').textContent = rollRaw + '°';
                 document.getElementById('yawRaw').textContent = yawRaw + '°';
                 
-                // 发送实际的累积角度值到ESP32
+                // 发送相对角度值到ESP32
                 sendData(
-                    parseFloat(axisState.pitch.total), 
-                    parseFloat(axisState.roll.total), 
-                    parseFloat(axisState.yaw.total), 
+                    parseFloat(axisState.pitch.total - 3600), 
+                    parseFloat(axisState.roll.total - 3600), 
+                    parseFloat(axisState.yaw.total - 3600), 
                     controlEnabled
                 );
                 
@@ -950,21 +1006,63 @@
                 processAxis('yaw', alpha);
             }
 
+            // 计算相对角度值（用于发送到ESP32）
+            const pitchRel = axisState.pitch.total - 3600;
+            const rollRel = axisState.roll.total - 3600;
+            const yawRel = axisState.yaw.total - 3600;
+            
+            // 计算映射角度（当前相对角度 - 初始相对角度）
+            const pitchMapped = pitchRel;
+            const rollMapped = rollRel;
+            const yawMapped = yawRel;
+            
             // 格式化显示
             const pitchRaw = axisState.pitch.total.toFixed(1);
             const rollRaw = axisState.roll.total.toFixed(1);
             const yawRaw = axisState.yaw.total.toFixed(1);
             
-            // 更新显示
-            document.getElementById('pitchRaw').textContent = pitchRaw + '°';
-            document.getElementById('rollRaw').textContent = rollRaw + '°';
-            document.getElementById('yawRaw').textContent = yawRaw + '°';
+            // 更新显示，并添加超出范围警告
+            const pitchEl = document.getElementById('pitchRaw');
+            const rollEl = document.getElementById('rollRaw');
+            const yawEl = document.getElementById('yawRaw');
             
-            // 发送实际的累积角度值到ESP32
+            pitchEl.textContent = pitchRaw + '°';
+            rollEl.textContent = rollRaw + '°';
+            yawEl.textContent = yawRaw + '°';
+            
+            // 检查映射角度是否超出±180°范围
+            if (Math.abs(pitchMapped) > 180) {
+                pitchEl.style.color = 'red';
+                pitchEl.style.fontWeight = 'bold';
+                showWarning('超出映射范围请进行姿态归零');
+            } else {
+                pitchEl.style.color = '#007bff';
+                pitchEl.style.fontWeight = 'normal';
+            }
+            
+            if (Math.abs(rollMapped) > 180) {
+                rollEl.style.color = 'red';
+                rollEl.style.fontWeight = 'bold';
+                showWarning('超出映射范围请进行姿态归零');
+            } else {
+                rollEl.style.color = '#007bff';
+                rollEl.style.fontWeight = 'normal';
+            }
+            
+            if (Math.abs(yawMapped) > 180) {
+                yawEl.style.color = 'red';
+                yawEl.style.fontWeight = 'bold';
+                showWarning('超出映射范围请进行姿态归零');
+            } else {
+                yawEl.style.color = '#007bff';
+                yawEl.style.fontWeight = 'normal';
+            }
+            
+            // 发送相对角度值到ESP32
             sendData(
-                parseFloat(axisState.pitch.total), 
-                parseFloat(axisState.roll.total), 
-                parseFloat(axisState.yaw.total), 
+                parseFloat(pitchRel), 
+                parseFloat(rollRel), 
+                parseFloat(yawRel), 
                 controlEnabled
             );
         }
