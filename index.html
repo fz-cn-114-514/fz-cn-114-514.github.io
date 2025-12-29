@@ -386,7 +386,7 @@
         <div class="channel-section">
             <div class="channel-title">俯仰角 (Pitch)</div>
             
-            <!-- 行一：原始数据、映射角度、感度倍率 -->
+            <!-- 行一：原始数据、映射角度、每度脉宽 -->
             <div class="channel-row">
                 <div class="channel-col">
                     <div class="value-label">传感器原始数据</div>
@@ -399,7 +399,7 @@
                 </div>
                 
                 <div class="channel-col">
-                    <div class="value-label">感度倍率 (Rate)</div>
+                    <div class="value-label">每度脉宽 (Rate)</div>
                     <input type="number" id="pitchRate" step="0.01" min="-50.00" max="50.00" value="5.55">
                 </div>
             </div>
@@ -427,7 +427,7 @@
         <div class="channel-section">
             <div class="channel-title">横滚角 (Roll)</div>
             
-            <!-- 行一：原始数据、映射角度、感度倍率 -->
+            <!-- 行一：原始数据、映射角度、每度脉宽 -->
             <div class="channel-row">
                 <div class="channel-col">
                     <div class="value-label">传感器原始数据</div>
@@ -440,7 +440,7 @@
                 </div>
                 
                 <div class="channel-col">
-                    <div class="value-label">感度倍率 (Rate)</div>
+                    <div class="value-label">每度脉宽 (Rate)</div>
                     <input type="number" id="rollRate" step="0.01" min="-50.00" max="50.00" value="5.55">
                 </div>
             </div>
@@ -468,7 +468,7 @@
         <div class="channel-section">
             <div class="channel-title">偏航角 (Yaw)</div>
             
-            <!-- 行一：原始数据、映射角度、感度倍率 -->
+            <!-- 行一：原始数据、映射角度、每度脉宽 -->
             <div class="channel-row">
                 <div class="channel-col">
                     <div class="value-label">传感器原始数据</div>
@@ -481,7 +481,7 @@
                 </div>
                 
                 <div class="channel-col">
-                    <div class="value-label">感度倍率 (Rate)</div>
+                    <div class="value-label">每度脉宽 (Rate)</div>
                     <input type="number" id="yawRate" step="0.01" min="-50.00" max="50.00" value="5.55">
                 </div>
             </div>
@@ -531,7 +531,7 @@
             <div class="info-content">
                 <p>1. 连接ESP32_Gyroscope热点后自动进入此页面</p>
                 <p>2. 点击"传感器开关"开启陀螺仪数据采集</p>
-                <p>3. 调整各通道的感度倍率和脉宽范围</p>
+                <p>3. 调整各通道的每度脉宽和脉宽范围</p>
                 <p>4. 使用"启用控制"开关控制陀螺仪对舵机的影响</p>
                 <p>5. 使用"锁屏开关"防止误触操作</p>
                 <p>6. "舵机回中"将所有舵机设置为1500us脉宽</p>
@@ -544,7 +544,7 @@
                 <p>2. 操作锁定状态下无法修改配置或执行控制指令</p>
                 <p>3. 舵机回中按钮仅在关闭启用控制后可用</p>
                 <p>4. 请确保舵机脉宽设置在安全范围内（500-2500us）</p>
-                <p>5. 感度倍率数值范围：-50.00 至 +50.00，负值时通道反转映射</p>
+                <p>5. 每度脉宽数值范围：-50.00 至 +50.00，负值时通道反转映射</p>
             </div>
         </div>
         
@@ -777,22 +777,19 @@
         
         // 开始读取传感器数据
         function startSensors() {
-            let hasData = false;
-            
+            // 移除旧的事件监听器，防止重复添加
+            window.removeEventListener('deviceorientation', handleDeviceOrientation);
+            // 添加新的事件监听器
             window.addEventListener('deviceorientation', handleDeviceOrientation);
-            
-            setTimeout(() => {
-                if (!hasData) {
-                    sensorStatusEl.textContent = '启动失败';
-                    sensorStatusEl.style.color = '#dc3545';
-                    addDebugInfo('陀螺仪启动失败');
-                }
-            }, 3000);
+            sensorStatusEl.textContent = '已开启';
+            sensorStatusEl.style.color = '#28a745';
         }
         
         // 停止读取传感器数据
         function stopSensors() {
             window.removeEventListener('deviceorientation', handleDeviceOrientation);
+            sensorStatusEl.textContent = '已关闭';
+            sensorStatusEl.style.color = '#dc3545';
         }
         
         // 更新通道配置
@@ -818,13 +815,14 @@
             addDebugInfo('通道配置已更新');
         }
         
-        // 禁用或启用输入框和按钮
+        // 禁用或启用输入框、按钮和开关
         function updateUIState() {
             const inputs = document.querySelectorAll('input[type="number"]');
             const buttons = document.querySelectorAll('.control-button');
+            const otherSwitches = document.querySelectorAll('input[type="checkbox"]:not(#lockSwitch)'); // 除了操作解锁开关外的所有开关
             
             if (operationLocked) {
-                // 锁定状态，禁用所有输入和按钮
+                // 锁定状态，禁用所有输入、按钮和其他开关
                 inputs.forEach(input => {
                     input.disabled = true;
                     input.style.opacity = '0.5';
@@ -833,8 +831,12 @@
                     button.disabled = true;
                     button.style.opacity = '0.5';
                 });
+                otherSwitches.forEach(switchEl => {
+                    switchEl.disabled = true;
+                    switchEl.parentElement.style.opacity = '0.5';
+                });
             } else {
-                // 解锁状态，启用所有输入和按钮
+                // 解锁状态，启用所有输入、按钮和其他开关
                 inputs.forEach(input => {
                     input.disabled = false;
                     input.style.opacity = '1';
@@ -848,6 +850,10 @@
                         button.disabled = false;
                         button.style.opacity = '1';
                     }
+                });
+                otherSwitches.forEach(switchEl => {
+                    switchEl.disabled = false;
+                    switchEl.parentElement.style.opacity = '1';
                 });
             }
         }
@@ -882,16 +888,9 @@
         sensorSwitch.addEventListener('change', (event) => {
             sensorEnabled = event.target.checked;
             if (sensorEnabled) {
-                if (!gyroStarted) {
-                    startGyro();
-                    gyroStarted = true;
-                }
-                sensorStatusEl.textContent = '已开启';
-                sensorStatusEl.style.color = '#28a745';
+                startSensors();
             } else {
                 stopSensors();
-                sensorStatusEl.textContent = '已关闭';
-                sensorStatusEl.style.color = '#dc3545';
             }
             addDebugInfo('传感器状态: ' + (sensorEnabled ? '开启' : '关闭'));
         });
