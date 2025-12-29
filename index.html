@@ -31,8 +31,8 @@
         
         h2 {
             text-align: center;
-            font-size: 36px;
-            margin-bottom: 30px;
+            font-size: 42px;
+            margin-bottom: 35px;
             color: #007bff;
         }
         
@@ -56,7 +56,7 @@
         
         .toggle-label {
             font-weight: bold;
-            font-size: 20px;
+            font-size: 24px;
             color: #333;
         }
         
@@ -64,8 +64,8 @@
         .custom-toggle {
             position: relative;
             display: inline-block;
-            width: 140px;
-            height: 60px;
+            width: 180px;
+            height: 70px;
         }
         
         .custom-toggle input {
@@ -92,16 +92,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 50px;
-            width: 70px;
+            height: 60px;
+            width: 90px;
             left: 5px;
             bottom: 5px;
             background-color: white;
             color: #dc3545;
-            font-size: 20px;
+            font-size: 24px;
             font-weight: bold;
             transition: .4s;
-            border-radius: 45px;
+            border-radius: 55px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
         
@@ -114,7 +114,7 @@
         }
         
         input:checked + .custom-slider:before {
-            transform: translateX(65px);
+            transform: translateX(85px);
             content: "ON";
             color: #28a745;
         }
@@ -131,10 +131,10 @@
             background: #28a745; /* 默认绿色 */
             color: white;
             border: none;
-            padding: 25px 40px;
+            padding: 30px 45px;
             border-radius: 15px;
             cursor: pointer;
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
             transition: all 0.1s;
             flex: 1;
@@ -181,36 +181,37 @@
         
         .value-display {
             background: white;
-            padding: 20px;
+            padding: 25px;
             border-radius: 15px;
             text-align: center;
             margin-bottom: 15px;
             font-weight: bold;
-            font-size: 32px;
+            font-size: 36px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            min-height: 80px;
+            min-height: 100px;
+            width: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         
         .value-label {
-            font-size: 20px;
+            font-size: 24px;
             color: #6c757d;
             text-align: center;
-            margin-bottom: 12px;
+            margin-bottom: 15px;
             font-weight: bold;
         }
         
         input[type="number"] {
             width: 100%;
-            padding: 20px;
+            padding: 25px;
             border: 2px solid #ced4da;
             border-radius: 15px;
-            font-size: 24px;
+            font-size: 28px;
             text-align: center;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            min-height: 80px;
+            min-height: 100px;
         }
         
         input[type="number"]:focus {
@@ -229,13 +230,13 @@
         
         .info-title {
             font-weight: bold;
-            font-size: 28px;
+            font-size: 32px;
             margin-bottom: 25px;
             color: #007bff;
         }
         
         .info-content {
-            font-size: 20px;
+            font-size: 24px;
             line-height: 1.8;
             color: #495057;
             margin-bottom: 25px;
@@ -257,7 +258,7 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 15px;
-            font-size: 22px;
+            font-size: 26px;
         }
         
         .status-label {
@@ -359,7 +360,7 @@
             </div>
             
             <div class="toggle-group">
-                <span class="toggle-label">锁屏开关</span>
+                <span class="toggle-label">操作解锁</span>
                 <label class="custom-toggle">
                     <input type="checkbox" id="lockSwitch" checked>
                     <span class="custom-slider"></span>
@@ -557,7 +558,7 @@
         const wsStatusEl = document.getElementById('wsStatus');
         const sensorStatusEl = document.getElementById('sensorStatus');
         const controlStatusEl = document.getElementById('controlStatus');
-        const lockStatusEl = document.getElementById('lockStatus');
+        const unlockStatusEl = document.getElementById('lockStatus');
         const controlSwitch = document.getElementById('controlSwitch');
         const lockSwitch = document.getElementById('lockSwitch');
         const sensorSwitch = document.getElementById('sensorSwitch');
@@ -568,7 +569,7 @@
         // WebSocket连接
         let ws = null;
         let controlEnabled = true; // 默认启用
-        let operationLocked = true; // 默认锁定
+        let operationLocked = false; // 默认解锁（ON状态）
         let sensorEnabled = false; // 默认关闭
         let lockClickCount = 0;
         let lockClickTimer = null;
@@ -756,31 +757,29 @@
             }
         }
         
+        // 设备方向事件处理函数
+        function handleDeviceOrientation(event) {
+            if (!gyroStarted) return;
+            
+            // 原始数据
+            const pitchRaw = event.beta ? event.beta.toFixed(1) : '0.0';
+            const rollRaw = event.gamma ? event.gamma.toFixed(1) : '0.0';
+            const yawRaw = event.alpha ? event.alpha.toFixed(1) : '0.0';
+            
+            // 更新显示
+            document.getElementById('pitchRaw').textContent = pitchRaw + '°';
+            document.getElementById('rollRaw').textContent = rollRaw + '°';
+            document.getElementById('yawRaw').textContent = yawRaw + '°';
+            
+            // 发送数据到ESP32
+            sendData(parseFloat(pitchRaw), parseFloat(rollRaw), parseFloat(yawRaw), controlEnabled);
+        }
+        
         // 开始读取传感器数据
         function startSensors() {
             let hasData = false;
             
-            window.addEventListener('deviceorientation', (event) => {
-                if (!hasData) {
-                    hasData = true;
-                    sensorStatusEl.textContent = '已开启';
-                    sensorStatusEl.style.color = '#28a745';
-                    addDebugInfo('陀螺仪数据读取开始');
-                }
-                
-                // 原始数据
-                const pitchRaw = event.beta ? event.beta.toFixed(1) : '0.0';
-                const rollRaw = event.gamma ? event.gamma.toFixed(1) : '0.0';
-                const yawRaw = event.alpha ? event.alpha.toFixed(1) : '0.0';
-                
-                // 更新显示
-                document.getElementById('pitchRaw').textContent = pitchRaw + '°';
-                document.getElementById('rollRaw').textContent = rollRaw + '°';
-                document.getElementById('yawRaw').textContent = yawRaw + '°';
-                
-                // 发送数据到ESP32
-                sendData(parseFloat(pitchRaw), parseFloat(rollRaw), parseFloat(yawRaw), controlEnabled);
-            });
+            window.addEventListener('deviceorientation', handleDeviceOrientation);
             
             setTimeout(() => {
                 if (!hasData) {
@@ -789,6 +788,11 @@
                     addDebugInfo('陀螺仪启动失败');
                 }
             }, 3000);
+        }
+        
+        // 停止读取传感器数据
+        function stopSensors() {
+            window.removeEventListener('deviceorientation', handleDeviceOrientation);
         }
         
         // 更新通道配置
@@ -814,6 +818,40 @@
             addDebugInfo('通道配置已更新');
         }
         
+        // 禁用或启用输入框和按钮
+        function updateUIState() {
+            const inputs = document.querySelectorAll('input[type="number"]');
+            const buttons = document.querySelectorAll('.control-button');
+            
+            if (operationLocked) {
+                // 锁定状态，禁用所有输入和按钮
+                inputs.forEach(input => {
+                    input.disabled = true;
+                    input.style.opacity = '0.5';
+                });
+                buttons.forEach(button => {
+                    button.disabled = true;
+                    button.style.opacity = '0.5';
+                });
+            } else {
+                // 解锁状态，启用所有输入和按钮
+                inputs.forEach(input => {
+                    input.disabled = false;
+                    input.style.opacity = '1';
+                });
+                // 按钮启用，除了舵机回中按钮在控制启用时禁用
+                buttons.forEach(button => {
+                    if (button.id === 'resetServoBtn') {
+                        button.disabled = controlEnabled;
+                        button.style.opacity = controlEnabled ? '0.5' : '1';
+                    } else {
+                        button.disabled = false;
+                        button.style.opacity = '1';
+                    }
+                });
+            }
+        }
+        
         // 事件监听器
         
         // 启用控制开关
@@ -824,17 +862,20 @@
             sendConfig();
             addDebugInfo('控制状态: ' + (controlEnabled ? '启用' : '禁用'));
             
-            // 更新舵机回中按钮状态
-            resetServoBtn.disabled = controlEnabled;
+            // 更新UI状态
+            updateUIState();
         });
         
-        // 锁屏开关
+        // 操作解锁开关
         lockSwitch.addEventListener('change', (event) => {
-            operationLocked = event.target.checked;
-            lockStatusEl.textContent = operationLocked ? '已锁定' : '已解锁';
-            lockStatusEl.style.color = operationLocked ? '#dc3545' : '#28a745';
+            operationLocked = !event.target.checked; // 开关ON时解锁（未锁定），OFF时锁定
+            unlockStatusEl.textContent = event.target.checked ? '已解锁' : '已锁定';
+            unlockStatusEl.style.color = event.target.checked ? '#28a745' : '#dc3545';
             sendConfig();
-            addDebugInfo('锁屏状态: ' + (operationLocked ? '锁定' : '解锁'));
+            addDebugInfo('操作解锁状态: ' + (event.target.checked ? '解锁' : '锁定'));
+            
+            // 更新UI状态
+            updateUIState();
         });
         
         // 传感器开关
@@ -844,11 +885,11 @@
                 if (!gyroStarted) {
                     startGyro();
                     gyroStarted = true;
-                } else {
-                    sensorStatusEl.textContent = '已开启';
-                    sensorStatusEl.style.color = '#28a745';
                 }
+                sensorStatusEl.textContent = '已开启';
+                sensorStatusEl.style.color = '#28a745';
             } else {
+                stopSensors();
                 sensorStatusEl.textContent = '已关闭';
                 sensorStatusEl.style.color = '#dc3545';
             }
@@ -899,14 +940,14 @@
         controlStatusEl.textContent = controlEnabled ? '已启用' : '已禁用';
         controlStatusEl.style.color = controlEnabled ? '#28a745' : '#dc3545';
         
-        lockStatusEl.textContent = operationLocked ? '已锁定' : '已解锁';
-        lockStatusEl.style.color = operationLocked ? '#dc3545' : '#28a745';
+        unlockStatusEl.textContent = !operationLocked ? '已解锁' : '已锁定';
+        unlockStatusEl.style.color = !operationLocked ? '#28a745' : '#dc3545';
         
         sensorStatusEl.textContent = sensorEnabled ? '已开启' : '已关闭';
         sensorStatusEl.style.color = sensorEnabled ? '#28a745' : '#dc3545';
         
-        // 初始化舵机回中按钮状态
-        resetServoBtn.disabled = controlEnabled;
+        // 初始化UI状态
+        updateUIState();
         
         // 初始化调试信息
         addDebugInfo('页面加载完成');
