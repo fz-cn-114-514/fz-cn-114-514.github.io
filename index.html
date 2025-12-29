@@ -97,7 +97,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #dc3545; /* 未激活红色 */
+            background-color: #28a745; /* 未激活绿色 */
             transition: .4s;
             border-radius: 26px;
         }
@@ -115,11 +115,11 @@
         }
         
         input:checked + .slider {
-            background-color: #28a745; /* 激活绿色 */
+            background-color: #dc3545; /* 激活红色 */
         }
         
         input:focus + .slider {
-            box-shadow: 0 0 1px #28a745;
+            box-shadow: 0 0 1px #dc3545;
         }
         
         input:checked + .slider:before {
@@ -470,22 +470,25 @@
         let lockClickCount = 0;
         let lockClickTimer = null;
         
-        // 通道配置
+        // 通道配置和偏移量
         let channelConfig = {
             pitch: {
                 rate: 5.55,
                 minPulse: 500,
-                maxPulse: 2500
+                maxPulse: 2500,
+                offset: 0.0 // 姿态偏移量
             },
             roll: {
                 rate: 5.55,
                 minPulse: 500,
-                maxPulse: 2500
+                maxPulse: 2500,
+                offset: 0.0 // 姿态偏移量
             },
             yaw: {
                 rate: 5.55,
                 minPulse: 500,
-                maxPulse: 2500
+                maxPulse: 2500,
+                offset: 0.0 // 姿态偏移量
             }
         };
         
@@ -517,7 +520,39 @@
                 };
                 
                 ws.onmessage = function(event) {
-                    addDebugInfo('收到消息: ' + event.data);
+                    const data = event.data;
+                    addDebugInfo('收到消息: ' + data);
+                    
+                    // 处理JSON数据
+                    if (data.startsWith('{')) {
+                        try {
+                            const jsonData = JSON.parse(data);
+                            
+                            // 更新映射角度
+                            if (jsonData.pitch_mapped !== undefined) {
+                                document.getElementById('pitchMapped').textContent = jsonData.pitch_mapped + '°';
+                            }
+                            if (jsonData.roll_mapped !== undefined) {
+                                document.getElementById('rollMapped').textContent = jsonData.roll_mapped + '°';
+                            }
+                            if (jsonData.yaw_mapped !== undefined) {
+                                document.getElementById('yawMapped').textContent = jsonData.yaw_mapped + '°';
+                            }
+                            
+                            // 更新脉宽数值
+                            if (jsonData.pitch_pulse !== undefined) {
+                                document.getElementById('pitchPulse').textContent = jsonData.pitch_pulse + 'us';
+                            }
+                            if (jsonData.roll_pulse !== undefined) {
+                                document.getElementById('rollPulse').textContent = jsonData.roll_pulse + 'us';
+                            }
+                            if (jsonData.yaw_pulse !== undefined) {
+                                document.getElementById('yawPulse').textContent = jsonData.yaw_pulse + 'us';
+                            }
+                        } catch (e) {
+                            addDebugInfo('JSON解析错误: ' + e.message);
+                        }
+                    }
                 };
                 
                 ws.onerror = function(error) {
@@ -645,15 +680,6 @@
                 document.getElementById('rollRaw').textContent = rollRaw + '°';
                 document.getElementById('yawRaw').textContent = yawRaw + '°';
                 
-                // 计算映射值（这里只是示例，实际映射由ESP32处理）
-                const pitchMapped = (parseFloat(pitchRaw) * channelConfig.pitch.rate).toFixed(1);
-                const rollMapped = (parseFloat(rollRaw) * channelConfig.roll.rate).toFixed(1);
-                const yawMapped = (parseFloat(yawRaw) * channelConfig.yaw.rate).toFixed(1);
-                
-                document.getElementById('pitchMapped').textContent = pitchMapped + '°';
-                document.getElementById('rollMapped').textContent = rollMapped + '°';
-                document.getElementById('yawMapped').textContent = yawMapped + '°';
-                
                 // 发送数据到ESP32
                 sendData(parseFloat(pitchRaw), parseFloat(rollRaw), parseFloat(yawRaw), controlEnabled);
             });
@@ -724,6 +750,16 @@
             controlEnabled = event.target.checked;
             sendConfig();
             addDebugInfo('控制状态: ' + (controlEnabled ? '启用' : '禁用'));
+            
+            // 更新舵机回中按钮状态
+            resetServoBtn.disabled = controlEnabled;
+            if (controlEnabled) {
+                resetServoBtn.style.opacity = '0.5';
+                resetServoBtn.style.cursor = 'not-allowed';
+            } else {
+                resetServoBtn.style.opacity = '1';
+                resetServoBtn.style.cursor = 'pointer';
+            }
         });
         
         // 操作锁定开关点击
@@ -733,6 +769,10 @@
         resetServoBtn.addEventListener('click', () => {
             if (operationLocked) {
                 addDebugInfo('操作已锁定，无法执行此操作');
+                return;
+            }
+            if (controlEnabled) {
+                addDebugInfo('启用控制时无法使用舵机回中功能');
                 return;
             }
             addDebugInfo('发送舵机回中指令');
@@ -748,6 +788,16 @@
             addDebugInfo('发送姿态归零指令');
             sendCommand('reset_attitude');
         });
+        
+        // 初始化舵机回中按钮状态
+        resetServoBtn.disabled = controlEnabled;
+        if (controlEnabled) {
+            resetServoBtn.style.opacity = '0.5';
+            resetServoBtn.style.cursor = 'not-allowed';
+        } else {
+            resetServoBtn.style.opacity = '1';
+            resetServoBtn.style.cursor = 'pointer';
+        }
         
         // 通道配置输入变化
         document.getElementById('pitchRate').addEventListener('change', updateChannelConfig);
