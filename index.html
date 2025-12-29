@@ -1,662 +1,467 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>舵机陀螺仪控制</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-        body {
-            padding: 10px;
-            background-color: #f5f5f5;
-        }
-        /* 开关样式 */
-        .switch-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .switch-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        .switch {
-            position: relative;
-            width: 60px;
-            height: 30px;
-            background-color: #ccc;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .switch.on {
-            background-color: #4CAF50;
-        }
-        .switch::after {
-            content: '';
-            position: absolute;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background-color: white;
-            top: 2px;
-            left: 2px;
-            transition: left 0.3s;
-        }
-        .switch.on::after {
-            left: 32px;
-        }
-        .switch-label {
-            position: absolute;
-            font-size: 12px;
-            color: white;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-        .switch-label.on {
-            left: 8px;
-        }
-        .switch-label.off {
-            right: 8px;
-        }
-
-        /* 映射归零按钮 */
-        .reset-btn {
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-bottom: 20px;
-        }
-        .reset-btn:active {
-            background-color: #ff0000;
-        }
-
-        /* 通道参数区 */
-        .channel-container {
-            background-color: white;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .channel-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        .channel-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            gap: 5px;
-            margin-bottom: 5px;
-        }
-        .param-item {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-        .param-item label {
-            font-size: 12px;
-            color: #666;
-        }
-        .param-item input {
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            text-align: center;
-        }
-        .param-item span {
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            background-color: #f9f9f9;
-            text-align: center;
-        }
-
-        /* 状态参数栏 */
-        .status-container {
-            background-color: white;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        .status-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .status-label {
-            font-weight: bold;
-        }
-        .status-value {
-            color: #666;
-        }
-
-        /* 说明区 */
-        .desc-container {
-            background-color: white;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            font-size: 12px;
-            color: #666;
-        }
-
-        /* 调试信息区 */
-        .debug-container {
-            background-color: #000;
-            color: #0f0;
-            padding: 10px;
-            border-radius: 5px;
-            height: 150px;
-            overflow: hidden;
-            font-size: 12px;
-            position: relative;
-        }
-        .debug-content {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            word-break: break-all;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 舵机陀螺仪控制器</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { padding: 10px; background: #f5f5f5; }
+    
+    /* 开关样式 */
+    .switch-group { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .switch-item { display: flex; align-items: center; gap: 5px; }
+    .switch {
+      position: relative; width: 60px; height: 30px; border-radius: 15px;
+      background: #ccc; cursor: pointer; transition: background 0.3s;
+    }
+    .switch.on { background: #4CAF50; }
+    .switch::after {
+      content: ''; position: absolute; width: 26px; height: 26px;
+      border-radius: 50%; top: 2px; left: 2px; background: white;
+      transition: left 0.3s;
+    }
+    .switch.on::after { left: 32px; }
+    .switch-label { position: absolute; top: 2px; font-size: 12px; color: white; }
+    .switch-label.on { left: 5px; }
+    .switch-label.off { right: 5px; }
+    
+    /* 按钮样式 */
+    .btn {
+      padding: 8px 15px; border: none; border-radius: 5px;
+      background: #2196F3; color: white; cursor: pointer;
+      transition: background 0.2s; margin: 5px 0;
+    }
+    .btn:active { background: #FF5722; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+    
+    /* 通道参数表格 */
+    .channel-container { margin: 20px 0; }
+    .channel-title { font-weight: bold; margin: 10px 0; }
+    .param-table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+    .param-table td {
+      border: 1px solid #ddd; padding: 8px; text-align: center;
+    }
+    .param-table input {
+      width: 100%; padding: 5px; border: 1px solid #ccc;
+      border-radius: 3px; text-align: center;
+    }
+    .param-table input:disabled { background: #eee; }
+    
+    /* 状态栏 */
+    .status-bar {
+      margin: 20px 0; padding: 10px; background: white;
+      border-radius: 5px; border: 1px solid #ddd;
+    }
+    .status-row { margin: 5px 0; font-size: 14px; }
+    
+    /* 调试日志 */
+    .log-container {
+      margin: 20px 0; padding: 10px; background: #222; color: #0f0;
+      border-radius: 5px; height: 150px; overflow: hidden;
+      position: relative; font-family: monospace; font-size: 12px;
+    }
+    .log-content {
+      position: absolute; bottom: 0; width: 100%;
+      animation: scroll-up 0.5s ease;
+    }
+    @keyframes scroll-up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    
+    /* 说明文字 */
+    .desc { margin: 10px 0; font-size: 14px; color: #666; }
+  </style>
 </head>
 <body>
-    <!-- 开关区 -->
-    <div class="switch-group">
-        <div class="switch-item">
-            <span>启用控制</span>
-            <div class="switch on" id="ctrl-switch">
-                <span class="switch-label on">ON</span>
-                <span class="switch-label off">OFF</span>
-            </div>
-        </div>
-        <div class="switch-item">
-            <span>操作解锁</span>
-            <div class="switch on" id="lock-switch">
-                <span class="switch-label on">ON</span>
-                <span class="switch-label off">OFF</span>
-            </div>
-        </div>
-        <div class="switch-item">
-            <span>陀螺仪开关</span>
-            <div class="switch" id="gyro-switch">
-                <span class="switch-label on">ON</span>
-                <span class="switch-label off">OFF</span>
-            </div>
-        </div>
+  <!-- 顶部开关组 -->
+  <div class="switch-group">
+    <div class="switch-item">
+      <span>启用控制</span>
+      <div class="switch on" id="ctrl-enable">
+        <span class="switch-label on">ON</span>
+        <span class="switch-label off">OFF</span>
+      </div>
     </div>
-
-    <!-- 映射归零按钮 -->
-    <button class="reset-btn" id="reset-btn">映射归零</button>
-
-    <!-- 通道参数区（P/R/Y三轴） -->
-    <div class="channel-container">
-        <div class="channel-title">俯仰通道（P）</div>
-        <div class="channel-row">
-            <div class="param-item">
-                <label>传感器原数值</label>
-                <span id="p-raw">0</span>
-            </div>
-            <div class="param-item">
-                <label>映射角度</label>
-                <span id="p-mapped">0</span>
-            </div>
-            <div class="param-item">
-                <label>映射引脚</label>
-                <input type="number" id="p-pin" value="11" disabled>
-            </div>
-            <div class="param-item">
-                <label>每度脉宽(rate)</label>
-                <input type="number" id="p-rate" value="10" disabled>
-            </div>
-        </div>
-        <div class="channel-row">
-            <div class="param-item">
-                <label>最小脉宽</label>
-                <input type="number" id="p-min" value="500" disabled>
-            </div>
-            <div class="param-item">
-                <label>输出脉宽</label>
-                <span id="p-pwm">1500</span>
-            </div>
-            <div class="param-item">
-                <label>0度脉宽</label>
-                <input type="number" id="p-zero" value="1500" disabled>
-            </div>
-            <div class="param-item">
-                <label>最大脉宽</label>
-                <input type="number" id="p-max" value="2500" disabled>
-            </div>
-        </div>
+    <div class="switch-item">
+      <span>操作解锁</span>
+      <div class="switch on" id="op-unlock">
+        <span class="switch-label on">ON</span>
+        <span class="switch-label off">OFF</span>
+      </div>
     </div>
-
-    <div class="channel-container">
-        <div class="channel-title">横滚通道（R）</div>
-        <div class="channel-row">
-            <div class="param-item">
-                <label>传感器原数值</label>
-                <span id="r-raw">0</span>
-            </div>
-            <div class="param-item">
-                <label>映射角度</label>
-                <span id="r-mapped">0</span>
-            </div>
-            <div class="param-item">
-                <label>映射引脚</label>
-                <input type="number" id="r-pin" value="12" disabled>
-            </div>
-            <div class="param-item">
-                <label>每度脉宽(rate)</label>
-                <input type="number" id="r-rate" value="10" disabled>
-            </div>
-        </div>
-        <div class="channel-row">
-            <div class="param-item">
-                <label>最小脉宽</label>
-                <input type="number" id="r-min" value="500" disabled>
-            </div>
-            <div class="param-item">
-                <label>输出脉宽</label>
-                <span id="r-pwm">1500</span>
-            </div>
-            <div class="param-item">
-                <label>0度脉宽</label>
-                <input type="number" id="r-zero" value="1500" disabled>
-            </div>
-            <div class="param-item">
-                <label>最大脉宽</label>
-                <input type="number" id="r-max" value="2500" disabled>
-            </div>
-        </div>
+    <div class="switch-item">
+      <span>陀螺仪开关</span>
+      <div class="switch" id="gyro-enable">
+        <span class="switch-label on">ON</span>
+        <span class="switch-label off">OFF</span>
+      </div>
     </div>
+    <button class="btn" id="reset-mapping">映射归零</button>
+  </div>
 
-    <div class="channel-container">
-        <div class="channel-title">偏航通道（Y）</div>
-        <div class="channel-row">
-            <div class="param-item">
-                <label>传感器原数值</label>
-                <span id="y-raw">0</span>
-            </div>
-            <div class="param-item">
-                <label>映射角度</label>
-                <span id="y-mapped">0</span>
-            </div>
-            <div class="param-item">
-                <label>映射引脚</label>
-                <input type="number" id="y-pin" value="13" disabled>
-            </div>
-            <div class="param-item">
-                <label>每度脉宽(rate)</label>
-                <input type="number" id="y-rate" value="10" disabled>
-            </div>
-        </div>
-        <div class="channel-row">
-            <div class="param-item">
-                <label>最小脉宽</label>
-                <input type="number" id="y-min" value="500" disabled>
-            </div>
-            <div class="param-item">
-                <label>输出脉宽</label>
-                <span id="y-pwm">1500</span>
-            </div>
-            <div class="param-item">
-                <label>0度脉宽</label>
-                <input type="number" id="y-zero" value="1500" disabled>
-            </div>
-            <div class="param-item">
-                <label>最大脉宽</label>
-                <input type="number" id="y-max" value="2500" disabled>
-            </div>
-        </div>
+  <!-- 俯仰通道参数 -->
+  <div class="channel-container">
+    <div class="channel-title">俯仰通道（Pitch）</div>
+    <table class="param-table">
+      <tr>
+        <td>传感器原数值</td>
+        <td>映射角度数值</td>
+        <td>映射引脚</td>
+        <td>每度脉宽(rate)</td>
+      </tr>
+      <tr>
+        <td><input type="text" id="p-raw" readonly value="0"></td>
+        <td><input type="text" id="p-mapped" readonly value="0"></td>
+        <td><input type="number" id="p-pin" value="12"></td>
+        <td><input type="number" id="p-rate" value="5.55" step="0.01"></td>
+      </tr>
+      <tr>
+        <td>最小脉宽</td>
+        <td>输出脉宽</td>
+        <td>0度脉宽</td>
+        <td>最大脉宽</td>
+      </tr>
+      <tr>
+        <td><input type="number" id="p-min" value="500"></td>
+        <td><input type="text" id="p-pwm" readonly value="1500"></td>
+        <td><input type="number" id="p-center" value="1500"></td>
+        <td><input type="number" id="p-max" value="2500"></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 横滚通道参数 -->
+  <div class="channel-container">
+    <div class="channel-title">横滚通道（Roll）</div>
+    <table class="param-table">
+      <tr>
+        <td>传感器原数值</td>
+        <td>映射角度数值</td>
+        <td>映射引脚</td>
+        <td>每度脉宽(rate)</td>
+      </tr>
+      <tr>
+        <td><input type="text" id="r-raw" readonly value="0"></td>
+        <td><input type="text" id="r-mapped" readonly value="0"></td>
+        <td><input type="number" id="r-pin" value="13"></td>
+        <td><input type="number" id="r-rate" value="5.55" step="0.01"></td>
+      </tr>
+      <tr>
+        <td>最小脉宽</td>
+        <td>输出脉宽</td>
+        <td>0度脉宽</td>
+        <td>最大脉宽</td>
+      </tr>
+      <tr>
+        <td><input type="number" id="r-min" value="500"></td>
+        <td><input type="text" id="r-pwm" readonly value="1500"></td>
+        <td><input type="number" id="r-center" value="1500"></td>
+        <td><input type="number" id="r-max" value="2500"></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 偏航通道参数 -->
+  <div class="channel-container">
+    <div class="channel-title">偏航通道（Yaw）</div>
+    <table class="param-table">
+      <tr>
+        <td>传感器原数值</td>
+        <td>映射角度数值</td>
+        <td>映射引脚</td>
+        <td>每度脉宽(rate)</td>
+      </tr>
+      <tr>
+        <td><input type="text" id="y-raw" readonly value="0"></td>
+        <td><input type="text" id="y-mapped" readonly value="0"></td>
+        <td><input type="number" id="y-pin" value="14"></td>
+        <td><input type="number" id="y-rate" value="5.55" step="0.01"></td>
+      </tr>
+      <tr>
+        <td>最小脉宽</td>
+        <td>输出脉宽</td>
+        <td>0度脉宽</td>
+        <td>最大脉宽</td>
+      </tr>
+      <tr>
+        <td><input type="number" id="y-min" value="500"></td>
+        <td><input type="text" id="y-pwm" readonly value="1500"></td>
+        <td><input type="number" id="y-center" value="1500"></td>
+        <td><input type="number" id="y-max" value="2500"></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 状态参数栏 -->
+  <div class="status-bar">
+    <div class="status-row"><strong>WiFi信息：</strong><span id="wifi-info">未连接 (ESP32_Gyroscope / 192.168.4.1)</span></div>
+    <div class="status-row"><strong>浏览器信息：</strong><span id="browser-info">Chrome/120.0.0.0 (客户端v1.0)</span></div>
+    <div class="status-row"><strong>硬件信息：</strong><span id="hardware-info">陀螺仪未启动 / X:0 Y:0 Z:0</span></div>
+    <div class="status-row"><strong>界面信息：</strong><span id="ui-info">码率: 50Hz / 延迟: 0ms</span></div>
+  </div>
+
+  <!-- 使用说明 -->
+  <div class="desc">
+    <h4>使用说明</h4>
+    <p>1. 确保手机连接到 ESP32_Gyroscope WiFi（密码：fzcnfzcn）</p>
+    <p>2. 操作解锁开关关闭时，仅可操作本开关，其他控件禁用</p>
+    <p>3. 映射归零：将当前陀螺仪读数作为0度基准，计算相对角度</p>
+    <p>4. 输出脉宽计算公式：输出脉宽 = 0度脉宽 + rate × 映射角度（不超出最大/最小脉宽）</p>
+    <p>5. 陀螺仪开关开启后，实时读取手机传感器数据并发送到ESP32</p>
+  </div>
+
+  <!-- 调试日志 -->
+  <div class="log-container">
+    <div class="log-content" id="log-content">
+      [系统] 页面加载完成，等待连接ESP32...<br>
     </div>
+  </div>
 
-    <!-- 状态参数栏 -->
-    <div class="status-container">
-        <div class="status-row">
-            <span class="status-label">WiFi信息</span>
-            <span class="status-value" id="wifi-info">未连接 / -</span>
-        </div>
-        <div class="status-row">
-            <span class="status-label">浏览器信息</span>
-            <span class="status-value" id="browser-info">- / v1.0</span>
-        </div>
-        <div class="status-row">
-            <span class="status-label">硬件信息</span>
-            <span class="status-value" id="hardware-info">未开启 / P:0, R:0, Y:0</span>
-        </div>
-        <div class="status-row">
-            <span class="status-label">界面信息</span>
-            <span class="status-value" id="ui-info">- / 100Hz / 0ms</span>
-        </div>
-    </div>
+  <script>
+    // ===================== 全局状态 =====================
+    const state = {
+      ws: null,                // WebSocket实例
+      isCtrlEnable: true,      // 启用控制
+      isOpUnlock: true,        // 操作解锁
+      isGyroEnable: false,     // 陀螺仪开关
+      gyroZero: { x: 0, y: 0, z: 0 }, // 陀螺仪归零基准
+      lastSendTime: 0,         // 上次发送时间
+      sendInterval: 20,        // 发送间隔（50Hz）
+      delay: 0                 // 通信延迟
+    };
 
-    <!-- 说明区 -->
-    <div class="desc-container">
-        <h4>使用说明</h4>
-        <p>1. 陀螺仪开关开启后读取手机三轴数据，映射归零后以当前值为0度基准</p>
-        <p>2. 输出脉宽计算公式：输出脉宽=0度脉宽+rate×映射角度，且不超过最小/最大脉宽限制</p>
-        <p>3. 操作解锁关闭后，仅可操作解锁开关，其余控件不可点击</p>
-        <h4>注意事项</h4>
-        <p>1. 确保手机开启陀螺仪权限</p>
-        <p>2. WiFi连接后才能向ESP32下发数据</p>
-        <p>3. 舵机脉宽范围建议500-2500us，避免超出硬件极限</p>
-    </div>
+    // ===================== DOM元素 =====================
+    const els = {
+      // 开关
+      ctrlEnable: document.getElementById('ctrl-enable'),
+      opUnlock: document.getElementById('op-unlock'),
+      gyroEnable: document.getElementById('gyro-enable'),
+      // 按钮
+      resetMapping: document.getElementById('reset-mapping'),
+      // 俯仰参数
+      pRaw: document.getElementById('p-raw'),
+      pMapped: document.getElementById('p-mapped'),
+      pPin: document.getElementById('p-pin'),
+      pRate: document.getElementById('p-rate'),
+      pMin: document.getElementById('p-min'),
+      pPwm: document.getElementById('p-pwm'),
+      pCenter: document.getElementById('p-center'),
+      pMax: document.getElementById('p-max'),
+      // 横滚参数
+      rRaw: document.getElementById('r-raw'),
+      rMapped: document.getElementById('r-mapped'),
+      rPin: document.getElementById('r-pin'),
+      rRate: document.getElementById('r-rate'),
+      rMin: document.getElementById('r-min'),
+      rPwm: document.getElementById('r-pwm'),
+      rCenter: document.getElementById('r-center'),
+      rMax: document.getElementById('r-max'),
+      // 偏航参数
+      yRaw: document.getElementById('y-raw'),
+      yMapped: document.getElementById('y-mapped'),
+      yPin: document.getElementById('y-pin'),
+      yRate: document.getElementById('y-rate'),
+      yMin: document.getElementById('y-min'),
+      yPwm: document.getElementById('y-pwm'),
+      yCenter: document.getElementById('y-center'),
+      yMax: document.getElementById('y-max'),
+      // 状态栏
+      wifiInfo: document.getElementById('wifi-info'),
+      browserInfo: document.getElementById('browser-info'),
+      hardwareInfo: document.getElementById('hardware-info'),
+      uiInfo: document.getElementById('ui-info'),
+      // 日志
+      logContent: document.getElementById('log-content')
+    };
 
-    <!-- 调试信息区 -->
-    <div class="debug-container">
-        <div class="debug-content" id="debug-content"></div>
-    </div>
+    // ===================== 工具函数 =====================
+    // 添加日志
+    function addLog(text) {
+      const now = new Date();
+      const timeStr = `${now.getHours().toString().padStart(2,0)}:${now.getMinutes().toString().padStart(2,0)}:${now.getSeconds().toString().padStart(2,0)}`;
+      els.logContent.innerHTML += `[${timeStr}] ${text}<br>`;
+      // 只保留最新20行
+      const lines = els.logContent.innerHTML.split('<br>');
+      if (lines.length > 20) {
+        els.logContent.innerHTML = lines.slice(-20).join('<br>');
+      }
+    }
 
-    <script>
-        // 全局状态
-        const state = {
-            // 开关状态
-            ctrlEnabled: true,
-            lockUnlocked: true,
-            gyroEnabled: false,
-            // 映射归零基准值
-            resetBase: { p: 0, r: 0, y: 0 },
-            // 陀螺仪原始数据
-            gyroRaw: { p: 0, r: 0, y: 0 },
-            // WebSocket连接
-            ws: null,
-            // 延迟统计
-            lastSendTime: 0,
-            delay: 0,
-            // 码率统计
-            sendCount: 0,
-            lastRateTime: Date.now()
-        };
+    // 限制数值范围
+    function clamp(val, min, max) {
+      return Math.min(Math.max(val, min), max);
+    }
 
-        // DOM元素
-        const els = {
-            // 开关
-            ctrlSwitch: document.getElementById('ctrl-switch'),
-            lockSwitch: document.getElementById('lock-switch'),
-            gyroSwitch: document.getElementById('gyro-switch'),
-            // 按钮
-            resetBtn: document.getElementById('reset-btn'),
-            // 通道参数
-            pRaw: document.getElementById('p-raw'),
-            pMapped: document.getElementById('p-mapped'),
-            pPin: document.getElementById('p-pin'),
-            pRate: document.getElementById('p-rate'),
-            pMin: document.getElementById('p-min'),
-            pPwm: document.getElementById('p-pwm'),
-            pZero: document.getElementById('p-zero'),
-            pMax: document.getElementById('p-max'),
-            rRaw: document.getElementById('r-raw'),
-            rMapped: document.getElementById('r-mapped'),
-            rPin: document.getElementById('r-pin'),
-            rRate: document.getElementById('r-rate'),
-            rMin: document.getElementById('r-min'),
-            rPwm: document.getElementById('r-pwm'),
-            rZero: document.getElementById('r-zero'),
-            rMax: document.getElementById('r-max'),
-            yRaw: document.getElementById('y-raw'),
-            yMapped: document.getElementById('y-mapped'),
-            yPin: document.getElementById('y-pin'),
-            yRate: document.getElementById('y-rate'),
-            yMin: document.getElementById('y-min'),
-            yPwm: document.getElementById('y-pwm'),
-            yZero: document.getElementById('y-zero'),
-            yMax: document.getElementById('y-max'),
-            // 状态信息
-            wifiInfo: document.getElementById('wifi-info'),
-            browserInfo: document.getElementById('browser-info'),
-            hardwareInfo: document.getElementById('hardware-info'),
-            uiInfo: document.getElementById('ui-info'),
-            // 调试信息
-            debugContent: document.getElementById('debug-content')
-        };
+    // 更新控件禁用状态（操作解锁控制）
+    function updateControlState() {
+      const isDisabled = !state.isOpUnlock;
+      // 除了操作解锁开关，其他控件根据解锁状态禁用
+      els.ctrlEnable.style.pointerEvents = isDisabled ? 'none' : 'auto';
+      els.gyroEnable.style.pointerEvents = isDisabled ? 'none' : 'auto';
+      els.resetMapping.disabled = isDisabled;
+      
+      // 输入框禁用
+      [els.pPin, els.pRate, els.pMin, els.pCenter, els.pMax,
+       els.rPin, els.rRate, els.rMin, els.rCenter, els.rMax,
+       els.yPin, els.yRate, els.yMin, els.yCenter, els.yMax].forEach(el => {
+        el.disabled = isDisabled;
+      });
+    }
 
-        // 初始化浏览器信息
-        function initBrowserInfo() {
-            const ua = navigator.userAgent;
-            let kernel = '未知';
-            if (ua.includes('Chrome')) kernel = 'Chrome';
-            else if (ua.includes('Safari')) kernel = 'Safari';
-            else if (ua.includes('Firefox')) kernel = 'Firefox';
-            els.browserInfo.textContent = `${kernel} / v1.0`;
-        }
+    // 计算脉宽
+    function calcPwm(raw, zero, rate, center, min, max) {
+      const mapped = (raw - zero).toFixed(1); // 映射角度
+      const pwm = Math.round(Number(center) + mapped * Number(rate));
+      return {
+        mapped: mapped,
+        pwm: clamp(pwm, Number(min), Number(max))
+      };
+    }
 
-        // 开关切换逻辑
-        function initSwitches() {
-            // 启用控制开关
-            els.ctrlSwitch.addEventListener('click', () => {
-                if (!state.lockUnlocked) return;
-                state.ctrlEnabled = !state.ctrlEnabled;
-                els.ctrlSwitch.classList.toggle('on', state.ctrlEnabled);
-                addDebug(`启用控制${state.ctrlEnabled ? '开启' : '关闭'}`);
-            });
+    // 发送数据到ESP32
+    function sendToESP32(data) {
+      if (!state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+      const startTime = performance.now();
+      state.ws.send(JSON.stringify(data));
+      // 记录发送时间，计算延迟
+      state.ws.onmessage = () => {
+        state.delay = (performance.now() - startTime).toFixed(0);
+      };
+    }
 
-            // 操作解锁开关
-            els.lockSwitch.addEventListener('click', () => {
-                state.lockUnlocked = !state.lockUnlocked;
-                els.lockSwitch.classList.toggle('on', state.lockUnlocked);
-                // 解锁/锁定输入框
-                const inputs = document.querySelectorAll('input');
-                inputs.forEach(input => {
-                    input.disabled = !state.lockUnlocked;
-                });
-                addDebug(`操作解锁${state.lockUnlocked ? '开启' : '关闭'}`);
-            });
+    // ===================== 事件绑定 =====================
+    // 启用控制开关
+    els.ctrlEnable.addEventListener('click', () => {
+      state.isCtrlEnable = !state.isCtrlEnable;
+      els.ctrlEnable.classList.toggle('on', state.isCtrlEnable);
+      addLog(`启用控制: ${state.isCtrlEnable ? 'ON' : 'OFF'}`);
+    });
 
-            // 陀螺仪开关
-            els.gyroSwitch.addEventListener('click', () => {
-                if (!state.lockUnlocked) return;
-                state.gyroEnabled = !state.gyroEnabled;
-                els.gyroSwitch.classList.toggle('on', state.gyroEnabled);
-                if (state.gyroEnabled) {
-                    startGyro();
-                    addDebug('陀螺仪开启');
-                } else {
-                    stopGyro();
-                    addDebug('陀螺仪关闭');
-                }
-            });
-        }
+    // 操作解锁开关
+    els.opUnlock.addEventListener('click', () => {
+      state.isOpUnlock = !state.isOpUnlock;
+      els.opUnlock.classList.toggle('on', state.isOpUnlock);
+      updateControlState();
+      addLog(`操作解锁: ${state.isOpUnlock ? 'ON' : 'OFF'}`);
+    });
 
-        // 映射归零按钮逻辑
-        function initResetBtn() {
-            els.resetBtn.addEventListener('click', () => {
-                if (!state.lockUnlocked || !state.gyroEnabled) return;
-                state.resetBase = { ...state.gyroRaw };
-                addDebug(`映射归零，基准值：P=${state.resetBase.p}, R=${state.resetBase.r}, Y=${state.resetBase.y}`);
-                // 重新计算映射角度
-                calculateMappedAngle();
-            });
-        }
-
+    // 陀螺仪开关
+    els.gyroEnable.addEventListener('click', () => {
+      state.isGyroEnable = !state.isGyroEnable;
+      els.gyroEnable.classList.toggle('on', state.isGyroEnable);
+      addLog(`陀螺仪开关: ${state.isGyroEnable ? 'ON' : 'OFF'}`);
+      if (state.isGyroEnable) {
         // 启动陀螺仪监听
-        function startGyro() {
-            if (!window.DeviceOrientationEvent) {
-                addDebug('当前浏览器不支持陀螺仪');
-                return;
-            }
-            // 请求权限（部分浏览器需要）
-            DeviceOrientationEvent.requestPermission?.().then(permission => {
-                if (permission !== 'granted') {
-                    addDebug('陀螺仪权限被拒绝');
-                    state.gyroEnabled = false;
-                    els.gyroSwitch.classList.remove('on');
-                    return;
-                }
-                window.addEventListener('deviceorientation', handleGyroData);
-                els.hardwareInfo.textContent = `已开启 / P:0, R:0, Y:0`;
-            }).catch(err => {
-                addDebug(`陀螺仪权限请求失败：${err}`);
-            });
+        if (window.DeviceOrientationEvent) {
+          window.addEventListener('deviceorientation', handleGyroData);
+          addLog('陀螺仪传感器已启动');
+        } else {
+          addLog('错误：当前设备不支持陀螺仪！');
+          state.isGyroEnable = false;
+          els.gyroEnable.classList.remove('on');
         }
+      } else {
+        window.removeEventListener('deviceorientation', handleGyroData);
+        addLog('陀螺仪传感器已停止');
+      }
+    });
 
-        // 停止陀螺仪监听
-        function stopGyro() {
-            window.removeEventListener('deviceorientation', handleGyroData);
-            els.hardwareInfo.textContent = `未开启 / P:0, R:0, Y:0`;
-        }
+    // 映射归零按钮
+    els.resetMapping.addEventListener('click', () => {
+      // 发送归零指令到ESP32（仅回执，逻辑在网页端）
+      state.ws.send('reset_mapping');
+      // 记录当前陀螺仪值为归零基准
+      state.gyroZero = {
+        x: Number(els.pRaw.value),
+        y: Number(els.rRaw.value),
+        z: Number(els.yRaw.value)
+      };
+      addLog(`映射归零: X=${state.gyroZero.x}, Y=${state.gyroZero.y}, Z=${state.gyroZero.z}`);
+    });
 
-        // 处理陀螺仪数据
-        function handleGyroData(e) {
-            if (!state.gyroEnabled) return;
-            // 获取三轴数据（alpha:偏航, beta:俯仰, gamma:横滚）
-            const p = e.beta || 0; // 俯仰
-            const r = e.gamma || 0; // 横滚
-            const y = e.alpha || 0; // 偏航
-            state.gyroRaw = { p, r, y };
-
-            // 更新原始数值显示
-            els.pRaw.textContent = p.toFixed(2);
-            els.rRaw.textContent = r.toFixed(2);
-            els.yRaw.textContent = y.toFixed(2);
-
-            // 更新硬件信息
-            els.hardwareInfo.textContent = `已开启 / P:${p.toFixed(2)}, R:${r.toFixed(2)}, Y:${y.toFixed(2)}`;
-
-            // 计算映射角度
-            calculateMappedAngle();
-
-            // 计算输出脉宽
-            calculatePwm();
-
-            // 下发数据到ESP32
-            sendToESP32();
-        }
-
-        // 计算映射角度（当前值 - 基准值）
-        function calculateMappedAngle() {
-            const pMapped = (state.gyroRaw.p - state.resetBase.p).toFixed(2);
-            const rMapped = (state.gyroRaw.r - state.resetBase.r).toFixed(2);
-            const yMapped = (state.gyroRaw.y - state.resetBase.y).toFixed(2);
-
-            // 更新映射角度显示
-            els.pMapped.textContent = pMapped;
-            els.rMapped.textContent = rMapped;
-            els.yMapped.textContent = yMapped;
-        }
-
-        // 计算输出脉宽
-        function calculatePwm() {
-            // 俯仰通道
-            const pZero = parseFloat(els.pZero.value);
-            const pRate = parseFloat(els.pRate.value);
-            const pMapped = parseFloat(els.pMapped.textContent);
-            let pPwm = pZero + pRate * pMapped;
-            const pMin = parseFloat(els.pMin.value);
-            const pMax = parseFloat(els.pMax.value);
-            pPwm = Math.max(pMin, Math.min(pMax, pPwm));
-            els.pPwm.textContent = pPwm.toFixed(0);
-
-            // 横滚通道
-            const rZero = parseFloat(els.rZero.value);
-            const rRate = parseFloat(els.rate.value);
-            const rMapped = parseFloat(els.rMapped.textContent);
-            let rPwm = rZero + rRate * rMapped;
-            const rMin = parseFloat(els.rMin.value);
-            const rMax = parseFloat(els.rMax.value);
-            rPwm = Math.max(rMin, Math.min(rMax, rPwm));
-            els.rPwm.textContent = rPwm.toFixed(0);
-
-            // 偏航通道
-            const yZero = parseFloat(els.yZero.value);
-            const yRate = parseFloat(els.yRate.value);
-            const yMapped = parseFloat(els.yMapped.textContent);
-            let yPwm = yZero + yRate * yMapped;
-            const yMin = parseFloat(els.yMin.value);
-            const yMax = parseFloat(els.yMax.value);
-            yPwm = Math.max(yMin, Math.min(yMax, yPwm));
-            els.yPwm.textContent = yPwm.toFixed(0);
-        }
-
-        // 连接WebSocket（ESP32）
-        function connectWS() {
-            // 替换为ESP32的IP地址
-            const esp32Ip = '192.168.4.1'; // ESP32 AP模式默认IP
-            const wsUrl = `ws://${esp32Ip}:81`;
-            state.ws = new WebSocket(wsUrl);
-
-            state.ws.onopen = () => {
-                addDebug(`WebSocket连接成功：${wsUrl}`);
-                els.wifiInfo.textContent = `ESP32-AP / ${esp32Ip}`;
-            };
-
-            state.ws.onclose = () => {
-                addDebug('WebSocket连接断开，5秒后重连');
-                els.wifiInfo.textContent = `未连接 / -`;
-                setTimeout(connectWS, 5000);
-            };
-
-            state.ws.onerror = (err) => {
-                addDebug(`WebSocket错误：${err}`);
-            };
-
-            state.ws.onmessage = (e) => {
-                // 计算延迟
-                state.delay = Date.now() - state.lastSendTime;
-                addDebug(`收到ESP32响应：${e.data}，延迟：${state.delay}ms`);
-            };
-        }
-
-        // 下发数据到ESP32
-        function sendToESP32() {
-            if (!state.ctrlEnabled || !state.ws || state.ws.readyState !== WebSocket.OPEN) return;
-
-            // 构造JSON数据
-            const data = {
-                'P-PIN': parseInt(els.pPin.value),
-                'P-PWM': parseInt(els.pPwm.textContent),
-                'R-PIN': parseInt(els.rPin.value),
-                'R-PWM': parseInt(els.rPwm.textContent),
-                'Y-PIN': parseInt(els.yPin.value),
-                'Y-PWM': parseInt(els.yPwm.textContent)
-            };
-
-            // 发送数据
-            state.lastSendTime = Date.now();
-            state.ws.send(JSON.stringify(data));
-
-            // 统计码率
-            state.sendCount++;
-            const now = Date.now();
-            if (now - state.lastRateTime >= 1000) {
-                const rate = state.sendCount;
-                state.sendCount = 0;
-                state.lastRateTime = now;
-                // 更新界面信息
-                els.uiInfo.textContent = `- / ${rate}Hz / ${state.delay}ms`;
-                addDebug(`码率：${rate}Hz，延迟：${state.delay}ms`);
-            }
-        }
-
-        // 添加调试信息
-        function addDebug(msg) {
-            const time = new Date().toLocaleTimeString();
-            const newMsg = `[${time}] ${msg}\n`;
-            els.debugContent.textContent += newMsg;
-            // 只保留最近10条
-            const lines = els.debugContent.textContent.split('\n');
-            if (lines.length > 10) {
-                els.debugContent.textContent = lines.slice(-10).join('\n');
-            }
-        }
-
-        // 初始化
-        window.onload = () => {
-            initBrowserInfo();
-            initSwitches();
-            initResetBtn();
-            connectWS();
-            addDebug('页面初始化完成');
+    // ===================== 陀螺仪处理 =====================
+    function handleGyroData(e) {
+      if (!state.isCtrlEnable || !state.isGyroEnable) return;
+      
+      // 获取原始数据（alpha:绕z轴, beta:绕x轴, gamma:绕y轴）
+      const rawX = e.beta || 0;    // Pitch（俯仰）
+      const rawY = e.gamma || 0;   // Roll（横滚）
+      const rawZ = e.alpha || 0;   // Yaw（偏航）
+      
+      // 更新原始数值显示
+      els.pRaw.value = rawX.toFixed(1);
+      els.rRaw.value = rawY.toFixed(1);
+      els.yRaw.value = rawZ.toFixed(1);
+      
+      // 计算各通道脉宽
+      const pitch = calcPwm(rawX, state.gyroZero.x, els.pRate.value, els.pCenter.value, els.pMin.value, els.pMax.value);
+      const roll = calcPwm(rawY, state.gyroZero.y, els.rRate.value, els.rCenter.value, els.rMin.value, els.rMax.value);
+      const yaw = calcPwm(rawZ, state.gyroZero.z, els.yRate.value, els.yCenter.value, els.yMin.value, els.yMax.value);
+      
+      // 更新映射角度和输出脉宽
+      els.pMapped.value = pitch.mapped;
+      els.pPwm.value = pitch.pwm;
+      els.rMapped.value = roll.mapped;
+      els.rPwm.value = roll.pwm;
+      els.yMapped.value = yaw.mapped;
+      els.yPwm.value = yaw.pwm;
+      
+      // 50Hz高频率发送（20ms一次）
+      const now = Date.now();
+      if (now - state.lastSendTime >= state.sendInterval) {
+        const data = {
+          "P-PIN": Number(els.pPin.value),
+          "P-PWM": pitch.pwm,
+          "R-PIN": Number(els.rPin.value),
+          "R-PWM": roll.pwm,
+          "Y-PIN": Number(els.yPin.value),
+          "Y-PWM": yaw.pwm
         };
-    </script>
+        sendToESP32(data);
+        state.lastSendTime = now;
+        
+        // 更新状态栏
+        els.hardwareInfo.textContent = `陀螺仪已启动 / X:${rawX.toFixed(1)} Y:${rawY.toFixed(1)} Z:${rawZ.toFixed(1)}`;
+        els.uiInfo.textContent = `码率: 50Hz / 延迟: ${state.delay}ms`;
+      }
+    }
+
+    // ===================== WebSocket连接 =====================
+    function connectWebSocket() {
+      // 连接ESP32的WebSocket（IP固定为192.168.4.1:81）
+      const wsUrl = `ws://192.168.4.1:81`;
+      state.ws = new WebSocket(wsUrl);
+      
+      state.ws.onopen = () => {
+        addLog(`WebSocket已连接: ${wsUrl}`);
+        els.wifiInfo.textContent = `已连接 (ESP32_Gyroscope / 192.168.4.1)`;
+      };
+      
+      state.ws.onclose = () => {
+        addLog(`WebSocket断开连接，5秒后重试...`);
+        els.wifiInfo.textContent = `断开连接 (ESP32_Gyroscope / 192.168.4.1)`;
+        setTimeout(connectWebSocket, 5000); // 重连
+      };
+      
+      state.ws.onerror = (err) => {
+        addLog(`WebSocket错误: ${err.message}`);
+      };
+    }
+
+    // ===================== 初始化 =====================
+    window.onload = () => {
+      // 初始化控件状态
+      updateControlState();
+      // 识别浏览器信息
+      const browser = navigator.userAgent.match(/Chrome\/(\d+)/);
+      const browserVer = browser ? `Chrome/${browser[1]}` : '未知浏览器';
+      els.browserInfo.textContent = `${browserVer} (客户端v1.0)`;
+      // 连接WebSocket
+      connectWebSocket();
+      addLog('页面初始化完成，等待WiFi连接...');
+    };
+  </script>
 </body>
 </html>
