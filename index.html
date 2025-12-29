@@ -9,29 +9,29 @@
     body { 
       padding: 15px; 
       background: #f5f5f5; 
-      font-size: 20px; /* 增大基础字体大小 */
+      font-size: 24px; /* 大幅增大基础字体大小 */
       max-width: 1200px; /* 限制最大宽度，在大屏幕上更美观 */
       margin: 0 auto; /* 居中显示 */
     }
     
     /* 开关样式 */
-    .switch-group { 
-      display: flex; 
+    .switch-group {
+      display: flex;
       justify-content: space-between; /* 均匀分布元素 */
-      gap: 20px; 
-      margin-bottom: 25px; 
+      gap: 20px;
+      margin-bottom: 30px;
       flex-wrap: wrap;
       align-items: center; /* 垂直居中对齐 */
-      padding: 15px 15px; /* 添加与通道框相同的内边距 */
+      padding: 20px 20px; /* 增加内边距 */
       background: white; /* 添加背景色，与通道框保持一致 */
       border-radius: 10px; /* 添加圆角，与通道框保持一致 */
       box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* 添加阴影，与通道框保持一致 */
     }
-    .switch-item { 
-      display: flex; 
-      align-items: center; 
-      gap: 10px; 
-      font-size: 18px; /* 增大标签文字 */
+    .switch-item {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 24px; /* 增大标签文字 */
       flex: 1; /* 让每个开关项平均分配空间 */
       justify-content: center; /* 在每个开关项中居中对齐内容 */
     }
@@ -70,18 +70,18 @@
     
     /* 按钮样式 */
     .btn {
-      padding: 15px 20px; /* 增加垂直内边距 */
-      border: none; 
+      padding: 15px 25px; /* 增加垂直内边距 */
+      border: none;
       border-radius: 8px; /* 增大圆角 */
-      background: #2196F3; 
-      color: white; 
+      background: #2196F3;
+      color: white;
       cursor: pointer;
-      transition: background 0.2s; 
-      margin: 8px 0; /* 增大外边距 */
-      font-size: 18px; /* 增大按钮文字 */
+      transition: background 0.2s;
+      margin: 15px 0; /* 增大外边距 */
+      font-size: 24px; /* 大幅增大按钮文字 */
       font-weight: bold;
       white-space: nowrap; /* 防止按钮文字换行 */
-      height: 50px; /* 增加按钮高度 */
+      height: 65px; /* 增加按钮高度 */
       display: flex;
       align-items: center;
       justify-content: center;
@@ -90,38 +90,45 @@
     .btn:disabled { background: #ccc; cursor: not-allowed; }
     
     /* 通道参数表格 */
-    .channel-container { 
-      margin: 25px 0; /* 增大容器边距 */
+    .channel-container {
+      margin: 40px 0; /* 增大容器边距，给更大的元素留出空间 */
       background: white; /* 添加背景色 */
       border-radius: 10px; /* 添加圆角 */
-      padding: 15px 15px; /* 垂直和水平内边距 */
+      padding: 25px 20px; /* 增大内边距，适应更大的字体 */
       box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* 添加阴影 */
+      overflow: hidden;
     }
     .channel-title { 
       font-weight: bold; 
-      margin: 15px 0; /* 增大标题边距 */
-      font-size: 22px; /* 增大标题字体 */
+      margin: 15px 0 25px 0; /* 增大标题边距，底部更大 */
+      font-size: 32px; /* 大幅增大标题字体 */
       color: #333; /* 添加颜色 */
+      text-align: center; /* 居中显示标题 */
     }
-    .param-table { 
-      width: 100%; 
-      border-collapse: collapse; 
+    .param-table {
+      width: 100%;
+      border-collapse: collapse;
       margin: 10px 0; /* 增大表格边距 */
-      font-size: 16px; /* 增大表格字体 */
+      font-size: 24px; /* 大幅增大表格字体 */
     }
     .param-table td {
-      border: 1px solid #ddd; 
-      padding: 15px 8px; /* 增大单元格内边距 */
+      border: 1px solid #ddd;
+      padding: 25px 10px; /* 调整单元格内边距，垂直方向更大以适应更大的元素 */
       text-align: center;
+      word-break: break-all;
+      font-size: 28px; /* 大幅增大表格标题字体 */
+      font-weight: bold;
     }
     .param-table input {
-      width: 100%; 
-      padding: 12px 5px; /* 增大输入框内边距 */
+      width: 100%;
+      padding: 15px 10px; /* 大幅增大输入框内边距 */
       border: 1px solid #ccc;
-      border-radius: 5px; 
+      border-radius: 5px;
       text-align: center;
-      font-size: 18px; /* 增大输入框字体 */
-      height: 45px; /* 增加高度 */
+      font-size: 42px; /* 大幅增大输入框字体，接近用户要求的50像素 */
+      height: 80px; /* 增加高度以适应更大的字体 */
+      font-weight: bold;
+      line-height: 1;
     }
     .param-table input:disabled { background: #eee; }
     
@@ -134,20 +141,38 @@
       border: 1px solid #ddd;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* 添加阴影 */
     }
-    .status-row { 
-      margin: 8px 0; /* 增大行间距 */
-      font-size: 18px; /* 进一步增大状态栏字体 */
-      display: flex; /* 使用flex布局 */
-      flex-wrap: wrap; /* 允许换行 */
+    .status-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+    .status-table td {
+      padding: 10px;
+      border: 1px solid #eee;
+    }
+    .status-col-narrow {
+      width: 25%; /* 窄列占25%宽度 */
+      padding: 10px;
+      font-size: 20px; /* 保持字体大小一致 */
+      background-color: #f9f9f9;
+    }
+    .status-col-wide {
+      width: 50%; /* 宽列占50%宽度 */
+      padding: 10px;
+      font-size: 20px; /* 保持字体大小一致 */
+      font-weight: bold;
+      color: #333;
+    }
+    .wifi-select {
+      color: #2196F3;
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: bold;
     }
     .status-value {
       font-weight: bold;
       color: #2196F3;
-      font-size: 20px; /* 增大状态数值字体 */
-    }
-    .status-row strong {
-      min-width: 100px; /* 设置标签最小宽度 */
-      flex-shrink: 0; /* 防止标签被压缩 */
+      font-size: 36px; /* 大幅增大状态数值字体 */
     }
     
     /* 调试日志 */
@@ -195,6 +220,119 @@
       margin: 8px 0; /* 增加段落间距 */
       line-height: 1.5; /* 增加行高 */
     }
+    
+    /* 移动端适配 */
+    @media (max-width: 768px) {
+      body {
+        font-size: 28px; /* 大幅增大基础字体 */
+        padding: 10px;
+      }
+      
+      .switch-group {
+        flex-direction: column;
+        gap: 15px;
+      }
+      
+      .switch-item {
+        font-size: 24px;
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .switch {
+        width: 100px;
+        height: 55px;
+        border-radius: 28px;
+      }
+      
+      .switch::after {
+        width: 48px;
+        height: 48px;
+        top: 3px;
+        left: 3px;
+      }
+      
+      .switch.on::after {
+        left: 49px;
+      }
+      
+      .switch-label {
+        font-size: 16px;
+        top: 15px;
+      }
+      
+      .btn {
+        width: 100%;
+        font-size: 24px;
+        height: 60px;
+        padding: 15px;
+      }
+      
+      .channel-container {
+        margin: 20px 0;
+        padding: 15px 10px;
+      }
+      
+      .channel-title {
+        font-size: 36px; /* 进一步增大移动端标题字体 */
+        margin: 15px 0 30px 0; /* 增大标题边距，底部更大 */
+        text-align: center;
+      }
+      
+      .param-table {
+        font-size: 24px;
+      }
+      
+      .param-table td {
+        padding: 15px 5px;
+      }
+      
+      .param-table input {
+        font-size: 42px; /* 大幅增大数值字体，接近用户要求的50像素 */
+        height: 80px;
+        padding: 15px 10px;
+        line-height: 1;
+      }
+      
+      .status-table {
+        width: 100%;
+      }
+      
+      .status-table td {
+        padding: 8px 5px;
+        font-size: 20px; /* 调整移动端基础字体 */
+      }
+      
+      .status-col-narrow {
+        width: 25%; /* 保持25%宽度 */
+        font-size: 20px; /* 增大移动端字体 */
+      }
+      
+      .status-col-wide {
+        width: 50%; /* 保持50%宽度 */
+        font-size: 24px; /* 增大移动端字体 */
+      }
+      
+      .status-value {
+        font-size: 48px; /* 大幅增大状态数值，比桌面端更大 */
+        display: inline-block;
+        margin-left: 10px;
+      }
+      
+      .log-container {
+        font-size: 20px;
+        height: 250px;
+      }
+      
+      .desc {
+        font-size: 24px;
+        padding: 15px 10px;
+      }
+      
+      .desc h4 {
+        font-size: 28px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -228,10 +366,9 @@
 
   <!-- 俯仰通道参数 -->
   <div class="channel-container">
-    <div class="channel-title">俯仰通道（Pitch）</div>
     <table class="param-table">
       <tr>
-        <td>传感器原数值</td>
+        <td>pitch轴原数值</td>
         <td>映射角度数值</td>
         <td>映射引脚</td>
         <td>每度脉宽(rate)</td>
@@ -259,10 +396,9 @@
 
   <!-- 横滚通道参数 -->
   <div class="channel-container">
-    <div class="channel-title">横滚通道（Roll）</div>
     <table class="param-table">
       <tr>
-        <td>传感器原数值</td>
+        <td>roll轴原数值</td>
         <td>映射角度数值</td>
         <td>映射引脚</td>
         <td>每度脉宽(rate)</td>
@@ -290,10 +426,9 @@
 
   <!-- 偏航通道参数 -->
   <div class="channel-container">
-    <div class="channel-title">偏航通道（Yaw）</div>
     <table class="param-table">
       <tr>
-        <td>传感器原数值</td>
+        <td>yaw轴原数值</td>
         <td>映射角度数值</td>
         <td>映射引脚</td>
         <td>每度脉宽(rate)</td>
@@ -321,10 +456,28 @@
 
   <!-- 状态参数栏 -->
   <div class="status-bar">
-    <div class="status-row"><strong>WiFi信息：</strong><span id="wifi-info">未连接 (ESP32_Gyroscope / 192.168.4.1)</span></div>
-    <div class="status-row"><strong>浏览器信息：</strong><span id="browser-info">Chrome/120.0.0.0 (客户端v1.0)</span></div>
-    <div class="status-row"><strong>硬件信息：</strong><span id="hardware-info">陀螺仪未启动 / X:<span class="status-value">0</span> Y:<span class="status-value">0</span> Z:<span class="status-value">0</span></span></div>
-    <div class="status-row"><strong>界面信息：</strong>码率: <span class="status-value">50</span>Hz / 延迟: <span class="status-value">0</span>ms</div>
+    <table class="status-table">
+      <tr>
+        <td class="status-col-narrow">WiFi信息</td>
+        <td class="status-col-wide"><span class="wifi-select">ESP32_Gyroscope</span></td>
+        <td class="status-col-narrow">192.168.4.1</td>
+      </tr>
+      <tr>
+        <td class="status-col-narrow">浏览器信息</td>
+        <td class="status-col-wide">Chrome/120.0.0.0</td>
+        <td class="status-col-narrow">客户端v1.0</td>
+      </tr>
+      <tr>
+        <td class="status-col-narrow">硬件信息</td>
+        <td class="status-col-wide">X:<span class="status-value">0</span> Y:<span class="status-value">0</span> Z:<span class="status-value">0</span></td>
+        <td class="status-col-narrow">陀螺仪未启动</td>
+      </tr>
+      <tr>
+        <td class="status-col-narrow">界面信息</td>
+        <td class="status-col-wide">延迟: <span class="status-value">0</span>ms</td>
+        <td class="status-col-narrow">收发频率: <span class="status-value">50</span>Hz</td>
+      </tr>
+    </table>
   </div>
 
   <!-- 使用说明 -->
