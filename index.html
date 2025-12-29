@@ -783,6 +783,7 @@
             window.addEventListener('deviceorientation', handleDeviceOrientation);
             sensorStatusEl.textContent = '已开启';
             sensorStatusEl.style.color = '#28a745';
+            addDebugInfo('陀螺仪数据读取开始');
         }
         
         // 停止读取传感器数据
@@ -888,7 +889,14 @@
         sensorSwitch.addEventListener('change', (event) => {
             sensorEnabled = event.target.checked;
             if (sensorEnabled) {
-                startSensors();
+                if (!gyroStarted) {
+                    // 首次启动，需要获取权限
+                    startGyro();
+                    gyroStarted = true;
+                } else {
+                    // 已经获得权限，直接启动传感器
+                    startSensors();
+                }
             } else {
                 stopSensors();
             }
