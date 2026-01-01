@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>陀螺仪</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 20px; border-radius: 10px; text-align: center; }
+        .data { margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; }
+        .value { font-weight: bold; color: #007bff; font-size: 24px; }
+        .status { color: #dc3545; font-weight: bold; margin: 10px 0; }
+        button { background: #007bff; color: white; border: none; padding: 12px 24px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:disabled { background: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>陀螺仪</h2>
+        <div id="status" class="status">点击启动</div>
+        <button id="startBtn">启动陀螺仪</button>
+        
+        <div class="data">俯仰角：<span id="pitch" class="value">3600</span>°</div>
+        <div class="data">横滚角：<span id="roll" class="value">3600</span>°</div>
+        <div class="data">偏航角：<span id="yaw" class="value">3600</span>°</div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        
+        // 1. 核心状态管理（横滚轴新增专属校准参数）
+        const axisState = {
+            pitch: {
+                total: 3600, prev: null, trend: [], lock: false, speed: 0
+            },
+            roll: {
+                total: 3600, prev: null, trend: [], lock: false, speed: 0,
+                baseValue: 0,       // 横滚初始基准值（校准用）
+                lastDir: 0,         // 上一次旋转方向（1=顺时针，-1=逆时针）
+                roundTrip: false,   // 往返旋转标记
+                tripOffset: 0       // 往返偏移补偿
+            },
+            yaw: {
+                total: 3600, prev: null, trend: [], lock: false, speed: 0
+            }
+        };
+
+        // 2. 动态配置（横滚轴专属参数）
+        const DYNAMIC_CONFIG = {
+            fastSpeed: 2.0, slowThreshold: 0.3, fastThreshold: 1.0,
+            trendLength: 5, trendValid: 3, // 5取3趋势判定
+            // 横滚轴专属配置（针对-90~90°范围优化）
+            roll: {
+                jumpThreshold: 90, maxRange: 180,
+                roundTripThreshold: 80, // 往返旋转判定阈值
+                lockOthers: true        // 横滚操作时强制锁定其他轴
+            },
+            pitch: { jumpThreshold: 180, maxRange: 360 },
+            yaw: { jumpThreshold: 180, maxRange: 360 }
+        };
+
+        /**
+         * 横滚轴专属跳变修正（解决往返偏移）
+         * @param {number} current 当前原始值
+         * @param {number} prev 上一次原始值
+         * @param {object} rollState 横滚状态
+         * @returns {number} 精准修正的Delta
+         */
+        function correctRollDelta(current, prev, rollState) {
+            if (prev === null) return 0;
+            
+            let delta = current - prev;
+            // 横滚跳变修正：-90~90°范围，跳变时强制匹配物理旋转方向
+            if (Math.abs(delta) > DYNAMIC_CONFIG.roll.jumpThreshold) {
+                // 判定物理旋转方向：从90→-90是顺时针（+180），从-90→90是逆时针（-180）
+                delta = current < prev ? 180 : -180;
+                
+                // 检测往返旋转：方向反转且接近基准值
+                if (rollState.lastDir !== 0 && Math.sign(delta) !== rollState.lastDir) {
+                    rollState.roundTrip = true;
+                    rollState.tripOffset += delta; // 记录往返偏移
+                }
+                rollState.lastDir = Math.sign(delta);
+            }
+
+            // 往返补偿：旋转回基准值附近时，修正累计偏移
+            if (rollState.roundTrip && Math.abs(current - rollState.baseValue) < 10) {
+                delta -= rollState.tripOffset;
+                rollState.roundTrip = false;
+                rollState.tripOffset = 0;
+                rollState.lastDir = 0;
+            }
+            return delta;
+        }
+
+        /**
+         * 通用跳变修正（俯仰/偏航）
+         * @param {string} axis 轴名称
+         * @param {number} current 当前值
+         * @param {number} prev 上一次值
+         * @returns {number} 修正后的Delta
+         */
+        function correctNormalDelta(axis, current, prev) {
+            if (prev === null) return 0;
+            const cfg = DYNAMIC_CONFIG[axis];
+            
+            let delta = current - prev;
+            if (Math.abs(delta) > cfg.jumpThreshold) {
+                delta = delta > 0 ? delta - cfg.maxRange : delta + cfg.maxRange;
+            }
+            return delta;
+        }
+
+        /**
+         * 5取3趋势判定
+         */
+        function getConsistentTrend(trend) {
+            if (trend.length < DYNAMIC_CONFIG.trendLength) return 0;
+            const up = trend.filter(t => t === 1).length;
+            const down = trend.filter(t => t === -1).length;
+            if (up >= DYNAMIC_CONFIG.trendValid) return 1;
+            if (down >= DYNAMIC_CONFIG.trendValid) return -1;
+            return 0;
+        }
+
+        /**
+         * 处理横滚轴（强制锁定其他轴+精准校准）
+         */
+        function processRoll(current) {
+            const state = axisState.roll;
+            // 首次初始化基准值
+            if (state.prev === null) {
+                state.baseValue = current;
+                state.prev = current;
+                return;
+            }
+
+            // 1. 横滚专属Delta修正
+            const delta = correctRollDelta(current, state.prev, state);
+            state.speed = Math.abs(delta);
+            const threshold = state.speed > DYNAMIC_CONFIG.fastSpeed 
+                ? DYNAMIC_CONFIG.fastThreshold 
+                : DYNAMIC_CONFIG.slowThreshold;
+
+            // 2. 过滤微小抖动
+            if (Math.abs(delta) < threshold) {
+                state.trend = [];
+                // 横滚静止时，解锁其他轴
+                if (DYNAMIC_CONFIG.roll.lockOthers) {
+                    axisState.pitch.lock = false;
+                    axisState.yaw.lock = false;
+                }
+                return;
+            }
+
+            // 3. 横滚操作时，强制锁定俯仰/偏航轴（核心：杜绝干扰）
+            if (DYNAMIC_CONFIG.roll.lockOthers) {
+                axisState.pitch.lock = true;
+                axisState.yaw.lock = true;
+            }
+
+            // 4. 5取3趋势判定
+            state.trend.push(delta > 0 ? 1 : -1);
+            if (state.trend.length > DYNAMIC_CONFIG.trendLength) state.trend.shift();
+            const trend = getConsistentTrend(state.trend);
+            if (trend === 0) return;
+
+            // 5. 精准累计（无偏移）
+            state.total += delta;
+            state.prev = current;
+            document.getElementById('roll').textContent = state.total.toFixed(1);
+        }
+
+        /**
+         * 处理俯仰/偏航轴
+         */
+        function processNormalAxis(axis, current) {
+            const state = axisState[axis];
+            if (state.lock) return; // 被横滚锁定时不处理
+
+            const delta = correctNormalDelta(axis, current, state.prev);
+            state.speed = Math.abs(delta);
+            const threshold = state.speed > DYNAMIC_CONFIG.fastSpeed 
+                ? DYNAMIC_CONFIG.fastThreshold 
+                : DYNAMIC_CONFIG.slowThreshold;
+
+            if (Math.abs(delta) < threshold) {
+                state.trend = [];
+                return;
+            }
+
+            state.trend.push(delta > 0 ? 1 : -1);
+            if (state.trend.length > DYNAMIC_CONFIG.trendLength) state.trend.shift();
+            const trend = getConsistentTrend(state.trend);
+            if (trend === 0) return;
+
+            state.total += delta;
+            state.prev = current;
+            document.getElementById(axis).textContent = state.total.toFixed(1);
+        }
+
+        function startGyro() {
+            if (!window.DeviceOrientationEvent) {
+                statusEl.textContent = '设备不支持';
+                return;
+            }
+            
+            statusEl.textContent = '启动中...';
+            startBtn.disabled = true;
+            
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission().then(permission => {
+                    if (permission === 'granted') startSensors();
+                    else {
+                        statusEl.textContent = '权限被拒绝';
+                        startBtn.disabled = false;
+                    }
+                }).catch(() => {
+                    statusEl.textContent = '权限请求失败';
+                    startBtn.disabled = false;
+                });
+            } else {
+                startSensors();
+            }
+        }
+        
+        function startSensors() {
+            let hasData = false;
+            
+            window.addEventListener('deviceorientation', (event) => {
+                const beta = event.beta ?? 0;
+                const gamma = event.gamma ?? 0;
+                const alpha = event.alpha ?? 0;
+
+                if (!hasData) {
+                    // 初始化所有轴的初始值
+                    axisState.pitch.prev = beta;
+                    axisState.roll.prev = gamma;
+                    axisState.roll.baseValue = gamma; // 横滚基准值
+                    axisState.yaw.prev = alpha;
+                    hasData = true;
+                    statusEl.textContent = '数据读取中';
+                    return;
+                }
+
+                // 优先处理横滚（强制互斥）
+                processRoll(gamma);
+                // 处理俯仰/偏航（被锁定则跳过）
+                processNormalAxis('pitch', beta);
+                processNormalAxis('yaw', alpha);
+            });
+            
+            setTimeout(() => {
+                if (!hasData) {
+                    statusEl.textContent = '启动失败，请重试';
+                    startBtn.disabled = false;
+                    startBtn.textContent = '重试';
+                }
+            }, 3000);
+        }
+        
+        startBtn.addEventListener('click', startGyro);
+    </script>
+</body>
+</html>
